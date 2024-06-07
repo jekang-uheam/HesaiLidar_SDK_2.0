@@ -101,6 +101,6 @@ class Udp7_2Parser : public GeneralParser<T_Point> {
 }  // namespace lidar
 }  // namespace hesai
 
-#include "udp7_2_parser.cc"
+#include "../src/udp7_2_parser.cc"
 
 #endif  // UDP7_2_PARSER_H_
