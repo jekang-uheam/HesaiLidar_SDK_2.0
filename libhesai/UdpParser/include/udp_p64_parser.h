@@ -68,6 +68,6 @@ class UdpP64Parser : public GeneralParser<T_Point> {
 }  // namespace lidar
 }  // namespace hesai
 
-#include "udp_p64_parser.cc"
+#include "../src/udp_p64_parser.cc"
 
 #endif  // UDP_P64_PARSER_H_

@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 14)
 PROJECT(Template)
 set(VERSION_MAJOR 2)
 set(VERSION_MINOR 0)
-set(VERSION_TINY  5)
+set(VERSION_TINY 5)
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/Version.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/Version.h"
@@ -18,10 +18,9 @@ add_compile_options(-Wall)
 
 # 设置生成平台为 x64
 if(_MSC_VER)
-set(CMAKE_GENERATOR_PLATFORM x64)
-set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
+  set(CMAKE_GENERATOR_PLATFORM x64)
+  set(OPENSSL_ROOT_DIR "C:/Program Files/OpenSSL-Win64")
 endif()
-
 
 include_directories("${PROJECT_BINARY_DIR}")
 find_package(Boost REQUIRED COMPONENTS system filesystem thread)
@@ -30,7 +29,6 @@ add_definitions(-DQT_MESSAGELOGCONTEXT)
 add_subdirectory(libhesai)
 
 # set (Boost_INCLUDE_DIRS "/usr/lib/x86_64-linux-gnu/")
-
 include_directories(
   libhesai
   libhesai/Lidar
@@ -58,60 +56,60 @@ include_directories(
 link_directories(./libhesai/PtcClient/lib)
 link_directories(${Boost_LIBRARY_DIRS})
 
-add_executable(sample
-  test/test.cc
-)
-
-target_link_libraries(sample
-  ${Boost_LIBRARIES}
-  source_lib
-  container_lib
-  ptcClient_lib
-  ptcParser_lib
-  log_lib
-  # ${PCL_LIBRARIES}  
-  ${OPENSSL_LIBRARIES}
-)
+# add_executable(sample
+# test/test.cc
+# )
+# target_link_libraries(sample
+# ${Boost_LIBRARIES}
+# source_lib
+# container_lib
+# ptcClient_lib
+# ptcParser_lib
+# log_lib
+#
+# # ${PCL_LIBRARIES}
+# ${OPENSSL_LIBRARIES}
+# )
 
 # add_library(libhesai
-#     driver/hesai_lidar_sdk.hpp
+# driver/hesai_lidar_sdk.hpp
 # )
 # target_link_libraries(libhesai
-#   ${Boost_LIBRARIES}
-#   source_lib
-#   container_lib
-#   ptcClient_lib
-#   log_lib
-  
+# ${Boost_LIBRARIES}
+# source_lib
+# container_lib
+# ptcClient_lib
+# log_lib
+
 # )
-
-find_package(CUDA )
-if(${CUDA_FOUND})
-	set(CUDA_SOURCE_PROPERTY_FORMAT OBJ)
-	set(CUDA_SEPARABLE_COMPILATION ON)
-	include_directories(${CUDA_INCLUDE_DIRS})
-	set(CUDA_PROPAGATE_HOST_FLAGS OFF)
-	set(CUDA_NVCC_FLAGS -arch=sm_61;-O3;-G;-g;-std=c++14)#根据具体GPU性能更改算力参数
-	link_directories($ENV{CUDA_PATH}/lib/x64)
-  file(GLOB_RECURSE CURRENT_HEADERS  *.h *.hpp *.cuh)
-  file(GLOB CURRENT_SOURCES  *.cpp *.cu)
-  file(GLOB CURRENT_SOURCES  *.cpp *.cu)
-  source_group("Include" FILES ${CURRENT_HEADERS}) 
-  source_group("Source" FILES ${CURRENT_SOURCES}) 
-  CUDA_ADD_EXECUTABLE(sample_gpu ${CURRENT_HEADERS} ${CURRENT_SOURCES} 
-  ./test/test.cu
-  ./libhesai/UdpParserGpu/src/buffer.cu)
-  target_link_libraries(sample_gpu
-  ${Boost_LIBRARIES}
-  source_lib
-  container_lib
-  ptcClient_lib
-  log_lib
-  ptcParser_lib
-  ${OPENSSL_LIBRARIES}
-  # ${PCL_LIBRARIES} 
-)
-else(${CUDA_FOUND})
-	MESSAGE(STATUS "cuda not found!")
-endif(${CUDA_FOUND})
-
+# find_package(CUDA)
+#
+# if(${CUDA_FOUND})
+# set(CUDA_SOURCE_PROPERTY_FORMAT OBJ)
+# set(CUDA_SEPARABLE_COMPILATION ON)
+# include_directories(${CUDA_INCLUDE_DIRS})
+# set(CUDA_PROPAGATE_HOST_FLAGS OFF)
+# set(CUDA_NVCC_FLAGS -arch=sm_61;-O3;-G;-g;-std=c++14) # 根据具体GPU性能更改算力参数
+# link_directories($ENV{CUDA_PATH}/lib/x64)
+# file(GLOB_RECURSE CURRENT_HEADERS *.h *.hpp *.cuh)
+# file(GLOB CURRENT_SOURCES *.cpp *.cu)
+# file(GLOB CURRENT_SOURCES *.cpp *.cu)
+# source_group("Include" FILES ${CURRENT_HEADERS})
+# source_group("Source" FILES ${CURRENT_SOURCES})
+# CUDA_ADD_EXECUTABLE(sample_gpu ${CURRENT_HEADERS} ${CURRENT_SOURCES}
+# ./test/test.cu
+# ./libhesai/UdpParserGpu/src/buffer.cu)
+# target_link_libraries(sample_gpu
+# ${Boost_LIBRARIES}
+# source_lib
+# container_lib
+# ptcClient_lib
+# log_lib
+# ptcParser_lib
+# ${OPENSSL_LIBRARIES}
+#
+# # ${PCL_LIBRARIES}
+# )
+# else(${CUDA_FOUND})
+# MESSAGE(STATUS "cuda not found!")
+# endif(${CUDA_FOUND})

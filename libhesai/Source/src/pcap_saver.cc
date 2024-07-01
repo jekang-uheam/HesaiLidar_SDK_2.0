@@ -35,15 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace hesai::lidar;
 static constexpr uint32_t pcap_magic_number = 0xa1b2c3d4;
 
-
 PcapSaver::PcapSaver()
-    : ofs_()
-    , pcap_path_("")
-    , dumping_(false)
-    , dumping_blocked_(false)
-    , tcp_dumped_(false)
-    , packets_cache_(new Container)
-{}
+    : tcp_dumped_(false), ofs_(), pcap_path_(""), packets_cache_(new Container), dumping_(false), dumping_blocked_(false) {}
 
 PcapSaver::~PcapSaver()
 {
@@ -125,7 +118,7 @@ void PcapSaver::TcpDump(const uint8_t* data, uint32_t data_len, uint32_t max_pkt
     int remain_len = data_len, pkt_len = max_pkt_len;
     int i = 0;
     while ( remain_len > 0 ) {
-        pkt_len = (remain_len > max_pkt_len) ? max_pkt_len : remain_len;
+    pkt_len = (static_cast<uint32_t>(remain_len) > max_pkt_len) ? max_pkt_len : remain_len;
             
         std::array<uint8_t, 1500> data_with_fake_header;
         *(PcapTCPHeader*)data_with_fake_header.data() = PcapTCPHeader(pkt_len, port);
@@ -182,7 +175,7 @@ int PcapSaver::Save(const std::string& recordPath, const UdpFrame_t& packets,
       }
     }
     // static unsigned int time_begin = GetMicroTickCount();
-    for (int i = 0; i < packets.size(); i++) {
+    for (size_t i = 0; i < packets.size(); i++) {
       auto pkt = PandarPacket(packets[i].buffer, packets[i].packet_len, port);
       auto& len = packets[i].packet_len;
       std::array<uint8_t, 1500> data_with_fake_header;
@@ -210,7 +203,7 @@ int PcapSaver::Save(const std::string& recordPath, const UdpFrame_t& packets,
 int PcapSaver::Save(const std::string& recordPath,
                     const UdpFrameArray_t& packets, int port) {
   int ret = 0;
-  for (int i = 0; i < packets.size(); i++) {
+  for (size_t i = 0; i < packets.size(); i++) {
     ret = Save(recordPath, packets[i], port);
     if (ret != 0) {
       break;

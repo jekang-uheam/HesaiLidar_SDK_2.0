@@ -37,7 +37,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define MAX_AZI_LEN (36000 * 256)
 #define CIRCLE_ANGLE (36000)
+#ifndef M_PI
 #define M_PI (3.14159265358979323846)
+#endif
 #define CORRECTION_AZIMUTH_STEP (200)
 #define CORRECTION_AZIMUTH_NUM (180)
 #define FINE_AZIMUTH_UNIT (256)
@@ -172,6 +174,6 @@ class Udp4_3Parser : public GeneralParser<T_Point> {
 }  // namespace lidar
 }  // namespace hesai
 
-#include "udp4_3_parser.cc"
+#include "../src/udp4_3_parser.cc"
 
 #endif  // UDP4_3_PARSER_H_

@@ -110,7 +110,7 @@ void PtcClient::TcpFlushIn() {
     len = client_->Receive(u8Buf.data(), u8Buf.size(), MSG_DONTWAIT);
     if (len > 0) {
       std::cout << "TcpFlushIn, len" << len << std::endl;
-      for(int i = 0; i<u8Buf.size(); i++) {
+      for (size_t i = 0; i < u8Buf.size(); i++) {
         printf("%x ", u8Buf[i]);
       }
     }
@@ -127,7 +127,7 @@ int PtcClient::QueryCommand(u8Array_t &byteStreamIn,
   // TcpFlushIn();
 
   int nLen = client_->Send(encoded.data(), encoded.size());
-  if (nLen != encoded.size()) {
+  if (nLen < 0 || (static_cast<size_t>(nLen) != encoded.size())) {
     // qDebug("%s: send failure, %d.", __func__, nLen);
     ret = -1;
   }
@@ -333,8 +333,8 @@ void PtcClient::CRCInit() {
 
 uint32_t PtcClient::CRCCalc(uint8_t *bytes, int len) {
   uint32_t i_crc = 0xffffffff;
-  int i = 0;
-  for (i = 0; (size_t)i < len; i++)
+  for (int i = 0; i < len; i++) {
     i_crc = (i_crc << 8) ^ m_CRCTable[((i_crc >> 24) ^ bytes[i]) & 0xff];
+  }
   return i_crc;
 }

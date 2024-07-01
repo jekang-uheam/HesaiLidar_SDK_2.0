@@ -73,6 +73,6 @@ class Udp6_1Parser : public GeneralParser<T_Point> {
 }  // namespace lidar
 }  // namespace hesai
 
-#include "udp6_1_parser.cc"
+#include "../src/udp6_1_parser.cc"
 
 #endif  // UDP6_1_PARSER_H_

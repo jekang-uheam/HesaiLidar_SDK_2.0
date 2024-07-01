@@ -192,6 +192,7 @@ int Udp2_5Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, con
       sizeof(HS_LIDAR_TAIL_ET_V5)
       );
   if (pHeader->HasSeqNum()){
+    /* clean-up
     const HS_LIDAR_TAIL_SEQ_NUM_ET_V5 *pTailSeqNum =
       reinterpret_cast<const HS_LIDAR_TAIL_SEQ_NUM_ET_V5 *>(
       &(udpPacket.buffer[0]) + pHeader->GetPacketSize() - 
@@ -199,6 +200,7 @@ int Udp2_5Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, con
       sizeof(HS_LIDAR_TAIL_CRC_ET_V5) - 
       sizeof(HS_LIDAR_TAIL_SEQ_NUM_ET_V5)
       );
+    */
   }
   const HS_LIDAR_BODY_SEQ3_ET_V5* pSeq3 = 
     reinterpret_cast<const HS_LIDAR_BODY_SEQ3_ET_V5 *>(
@@ -222,12 +224,12 @@ int Udp2_5Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, con
   output.laser_num = pHeader->GetLaserNum();
   
   int index_unit = 0;
-  int index_seq = 0;
+  // clean-up // int index_seq = 0;
   for (int blockId = 0; blockId < pHeader->GetBlockNum(); blockId++) {
     for (int seqId = 0; seqId < pHeader->GetSeqNum(); seqId++) {
       int16_t horizontalAngle = pSeq3->GetHorizontalAngle();
       int16_t verticalAngle = pSeq3->GetVerticalAngle();
-      uint8_t Confidence = pSeq3->GetConfidence();
+      // clean-up // uint8_t Confidence = pSeq3->GetConfidence();
       for (int unitId = 0; unitId < (pHeader->GetLaserNum()/pHeader->GetSeqNum()); unitId++){
         int16_t distance = pUnit->GetDistance();
         int8_t reflectivity = pUnit->GetReflectivity();
@@ -292,16 +294,16 @@ int16_t Udp2_5Parser<T_Point>::GetVecticalAngle(int channel) {
 template<typename T_Point>
 int Udp2_5Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet) {
   // get configer information from corrections_, 1 block 1 corrections_ 
-  float division = (float)corrections_.angle_division;
+  // clean-up // float division = (float)corrections_.angle_division;
   float apha =  corrections_.elevations[0];
   float beta =  corrections_.elevations[1];
   float gamma =  corrections_.elevations[2];
   // get the laser_num
   uint16_t lasernum = packet.laser_num;
   for (int blockId = 0; blockId < packet.block_num; blockId++) {
-    T_Point point;
-    float delte_apha = 0;
-    float delte_theta = 0;
+    // clean-up // T_Point point;
+    // clean-up // float delte_apha = 0;
+    // clean-up // float delte_theta = 0;
     for (int i = 0; i < lasernum; i++) {
       int point_index = packet.packet_index * packet.points_num + blockId * packet.laser_num + i; 
       // get phi and psi and distance

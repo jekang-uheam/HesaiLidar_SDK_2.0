@@ -103,7 +103,7 @@ namespace lidar
 }  // namespace lidar
 }  // namespace hesai
 
-#include "udp2_5_parser.cc"
+#include "../src/udp2_5_parser.cc"
 
 
 #endif // UDP2_5_PARSER_H

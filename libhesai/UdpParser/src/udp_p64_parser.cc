@@ -43,12 +43,12 @@ UdpP64Parser<T_Point>::UdpP64Parser() {
 }
 
 template<typename T_Point>
-UdpP64Parser<T_Point>::~UdpP64Parser() { printf("release general parser\n"); }
+UdpP64Parser<T_Point>::~UdpP64Parser() { printf("UdpP64Parser release general parser\n"); }
 
 template<typename T_Point>
 int UdpP64Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet) {
   for (int blockid = 0; blockid < packet.block_num; blockid++) {
-    T_Point point;
+    // clean-up // T_Point point;
     int elevation = 0;
     int azimuth = 0;   
     
@@ -72,7 +72,8 @@ int UdpP64Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarD
       setZ(frame.points[point_index], z);
       setIntensity(frame.points[point_index], packet.reflectivities[blockid * packet.laser_num + i]);
       setTimestamp(frame.points[point_index], double(packet.sensor_timestamp) / kMicrosecondToSecond);
-      setRing(frame.points[point_index], i);  
+      setRing(frame.points[point_index], i);
+      setAngle(frame.points[point_index], Azimuth);
     }
   }
   frame.points_num += packet.points_num;
@@ -113,8 +114,8 @@ int UdpP64Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, con
   output.laser_num = pHeader->GetLaserNum();
 
   int index = 0;
-  float minAzimuth = 0;
-  float maxAzimuth = 0;
+  // clean-up // float minAzimuth = 0;
+  // clean-up // float maxAzimuth = 0;
 
   for (int blockid = 0; blockid < pHeader->GetBlockNum(); blockid++) {
     uint16_t u16Azimuth = pAzimuth->GetAzimuth();
