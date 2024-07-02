@@ -32,6 +32,7 @@ int SV_P64_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, co
 
   this->spin_speed_ = tail_ptr->GetMotorSpeed();
   output.spin_speed = tail_ptr->m_u16MotorSpeed;
+  this->is_dual_return_ = tail_ptr->IsDualReturn();
 
   output.host_timestamp = GetMicroTickCountU64();
   output.points_num = header_ptr->GetBlockNum() * header_ptr->GetLaserNum();
@@ -81,16 +82,17 @@ int SV_P64_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, Lidar
   int azimuth = 0;
   int elevation = 0;
 
-  for (uint16_t block_id = 0; block_id < packet.block_num; ++block_id) {
+  for (uint16_t j = 0; j < packet.block_num; ++j) {
     azimuth = 0;
     elevation = 0;
     for (uint16_t i = 0; i < packet.laser_num; ++i) {
-      int point_index = (packet.packet_index * packet.points_num) + (block_id * packet.laser_num) + i;
-      float distance = packet.distances[(block_id * packet.laser_num) + i] * packet.distance_unit;
+      int block_id = (packet.laser_num * j) + i;
+      int point_index = (packet.packet_index * packet.points_num) + block_id;
+      float distance = packet.distances[block_id] * packet.distance_unit;
       if (this->get_correction_file_) {
         elevation = this->elevation_correction_[i] * kResolutionInt;
         elevation = (CIRCLE + elevation) % CIRCLE;
-        azimuth = static_cast<int>(packet.azimuth[(block_id * packet.laser_num) + i]) + (this->azimuth_collection_[i] * kResolutionInt);
+        azimuth = static_cast<int>(packet.azimuth[block_id]) + (this->azimuth_collection_[i] * kResolutionInt);
         azimuth = (CIRCLE + azimuth) % CIRCLE;
       }
 
@@ -100,13 +102,20 @@ int SV_P64_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, Lidar
       float z = distance * this->sin_all_angle_[elevation];
       this->TransformPoint(x, y, z);
 
+      double timestamp = double(packet.sensor_timestamp) / kMicrosecondToSecond;
+      if (this->is_dual_return_) {
+        timestamp -= static_cast<double>(kBlockOffsetDual[block_id] + kFiringOffset[i]) / kMicrosecondToSecond;
+      } else {
+        timestamp -= static_cast<double>(kBlockOffsetSingle[block_id] + kFiringOffset[i]) / kMicrosecondToSecond;
+      }
+
       setX(frame.points[point_index], x);
       setY(frame.points[point_index], y);
       setZ(frame.points[point_index], z);
-      setIntensity(frame.points[point_index], packet.reflectivities[(block_id * packet.laser_num) + i]);
-      setTimestamp(frame.points[point_index], double(packet.sensor_timestamp) / kMicrosecondToSecond);
+      setIntensity(frame.points[point_index], packet.reflectivities[block_id]);
+      setTimestamp(frame.points[point_index], timestamp);
       setRing(frame.points[point_index], i);
-      setAngle(frame.points[point_index], static_cast<int>(packet.azimuth[(block_id * packet.laser_num) + i]));
+      setAngle(frame.points[point_index], static_cast<int>(packet.azimuth[block_id]));
     }
   }
   frame.points_num += packet.points_num;

@@ -101,6 +101,11 @@ struct HS_LIDAR_TAIL_SEQ_NUM_L64 {
 } PACKED;
 
 struct HS_LIDAR_TAIL_L64 {
+  // return mode
+  static const uint8_t kStrongestReturn = 0x37;
+  static const uint8_t kLastReturn = 0x38;
+  static const uint8_t kDualReturn = 0x39;
+
   ReservedInfo1 m_reservedInfo1;
   uint8_t m_u8Reserved0[2];
   uint8_t m_u8Shutdown;
@@ -117,6 +122,11 @@ struct HS_LIDAR_TAIL_L64 {
   uint16_t GetErrorCode() const { return little_to_native(m_u16ErrorCode); }
 
   uint32_t GetTimestamp() const { return little_to_native(m_u32Timestamp); }
+
+  uint8_t GetReturnMode() const { return m_u8ReturnMode; }
+  bool IsLastReturn() const { return m_u8ReturnMode == kLastReturn; }
+  bool IsStrongestReturn() const { return m_u8ReturnMode == kStrongestReturn; }
+  bool IsDualReturn() const { return m_u8ReturnMode == kDualReturn; }
 
   uint8_t GetUTCData(uint8_t index) const {
     return m_u8UTC[index < sizeof(m_u8UTC) ? index : 0];
