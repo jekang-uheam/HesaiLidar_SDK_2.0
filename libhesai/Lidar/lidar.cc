@@ -182,9 +182,10 @@ int Lidar<T_Point>::LoadCorrectionForUdpParser() {
     std::cout << __func__ << "get correction info fail\n";
     return -1;
   }
+
   if (udp_parser_) {
-    return udp_parser_->LoadCorrectionString(
-        (char *)sData.data());
+    std::string data_str((char *)sData.data(), sData.size());
+    return udp_parser_->LoadCorrectionString((char *)data_str.c_str());
   } else {
     std::cout << __func__ << "udp_parser_ nullptr\n";
     return -1;
@@ -297,11 +298,14 @@ bool Lidar<T_Point>::ComputeXYZIComplete(int index) {
 template <typename T_Point>
 void Lidar<T_Point>::LoadCorrectionFile(std::string correction_path) {
   if (udp_parser_) {
-    udp_parser_->LoadCorrectionFile(correction_path);
-    return;
-  } else
+    if (correction_path == "") {
+      udp_parser_->LoadCorrectionFile(udp_parser_->GetParser()->GetAngleCorrectionFilePath());
+    } else {
+      udp_parser_->LoadCorrectionFile(correction_path);
+    }
+  } else {
     std::cout << __func__ << "udp_parser_ nullptr\n";
-
+  }
   return;
 }
 
@@ -320,10 +324,14 @@ int Lidar<T_Point>::LoadCorrectionString(char *correction_string) {
 template <typename T_Point>
 void Lidar<T_Point>::LoadFiretimesFile(std::string firetimes_path) {
   if (udp_parser_) {
-    udp_parser_->LoadFiretimesFile(firetimes_path);
-    return;
-  } else
+    if (firetimes_path == "") {
+      udp_parser_->LoadFiretimesFile(udp_parser_->GetParser()->GetFiretimeCorrectionFilePath());
+    } else {
+      udp_parser_->LoadFiretimesFile(firetimes_path);
+    }
+  } else {
     std::cout << __func__ << "udp_parser_ nullptr\n";
+  }
 
   return;
 }

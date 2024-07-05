@@ -43,8 +43,19 @@ class SV_P128_Parser : public GeneralParser<T_Point> {
   // compute lidar distance correction
   void GetDistanceCorrection(int laser_id, float distance, int& azimuth, int& elevation);
 
+  // Get angle correction file path
+  std::string GetAngleCorrectionFilePath() override { return "/surf/bin/CorrectionFiles/angle_correction/pandar_128e3x_angle_correction.csv"; }
+  // Get firetime correction file path
+  std::string GetFiretimeCorrectionFilePath() override { return "/surf/bin/CorrectionFiles/firetime_correction/pandar_128e3x_firetime_correction.csv"; }
+
  private:
   static const int kLaserNum = 128;
+
+  std::vector<float> block_offset_128_single_standard_;
+  std::vector<float> block_offset_128_single_high_resolution_;
+  float block_offset_128_dual_;
+
+  uint8_t operation_mode_;
 
   double section_distance_;
   float distance_correction_para_a_;
