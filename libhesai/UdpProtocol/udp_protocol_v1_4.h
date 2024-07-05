@@ -277,7 +277,7 @@ struct HS_LIDAR_TAIL_SEQ_NUM_ME_V4 {
 
   void CalPktLoss(uint32_t &u32StartSeqNum, uint32_t &u32LastSeqNum, uint32_t &u32LossCount, 
         uint32_t &u32StartTime, uint32_t &u32TotalLossCount, uint32_t &u32TotalStartSeqNum) const {
-    bool print = false;
+    // clean-up // bool print = false;
     if (u32StartSeqNum == 0) {
       u32LossCount = 0;
       u32TotalLossCount = 0;
@@ -290,7 +290,7 @@ struct HS_LIDAR_TAIL_SEQ_NUM_ME_V4 {
     if (m_u32SeqNum - u32LastSeqNum > 1) {
       u32LossCount += (m_u32SeqNum - u32LastSeqNum - 1);
       u32TotalLossCount += (m_u32SeqNum - u32LastSeqNum - 1);
-      print = true;
+      // clean-up // print = true;
       // if (m_u32SeqNum - u32LastSeqNum - 1 > 1000)
       // printf("%d,  %u, %u\n", m_u32SeqNum - u32LastSeqNum - 1, u32LastSeqNum,
       // m_u32SeqNum);
@@ -309,10 +309,10 @@ struct HS_LIDAR_TAIL_SEQ_NUM_ME_V4 {
   }
 
   void CalPktLoss(uint32_t &u32StartSeqNum, uint32_t &u32LastSeqNum, uint32_t &u32LossCount, uint32_t &u32StartTime) const {
-    bool print = false;
+    // clean-up // bool print = false;
     if (m_u32SeqNum - u32LastSeqNum > 1) {
       u32LossCount += (m_u32SeqNum - u32LastSeqNum - 1);
-      print = true;
+      // clean-up // print = true;
       // if (m_u32SeqNum - u32LastSeqNum - 1 > 1000)
       // printf("%d,  %u, %u\n", m_u32SeqNum - u32LastSeqNum - 1, u32LastSeqNum,
       // m_u32SeqNum);
@@ -355,7 +355,7 @@ struct HS_LIDAR_TAIL_IMU_ME_V4 {
     return little_to_native(m_u16IMUAccelUnit) / 1000.f;
   }
   double GetIMUAngVelUnit() const {
-    return little_to_native(m_u16IMUAngVelUnit) / 1000.f;
+    return little_to_native(m_u16IMUAngVelUnit) / 100.f;
   }
   uint32_t GetIMUTimestamp() const {
     return little_to_native(m_u32IMUTimeStamp);

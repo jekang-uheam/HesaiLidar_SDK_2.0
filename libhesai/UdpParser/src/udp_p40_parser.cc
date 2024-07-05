@@ -44,12 +44,12 @@ UdpP40Parser<T_Point>::UdpP40Parser() {
 }
 
 template<typename T_Point>
-UdpP40Parser<T_Point>::~UdpP40Parser() { printf("release general parser\n"); }
+UdpP40Parser<T_Point>::~UdpP40Parser() { printf("UdpP40Parser release general parser\n"); }
 
 template<typename T_Point>
 int UdpP40Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet) {
   for (int blockid = 0; blockid < packet.block_num; blockid++) {
-    T_Point point;
+    // clean-up // T_Point point;
     int elevation = 0;
     int azimuth = 0;
 
@@ -110,8 +110,8 @@ int UdpP40Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, con
   output.host_timestamp = GetMicroTickCountU64();
   output.sensor_timestamp = pTail->GetMicroLidarTimeU64();
   int index = 0;
-  float minAzimuth = 0;
-  float maxAzimuth = 0;
+  // clean-up // float minAzimuth = 0;
+  // clean-up // float maxAzimuth = 0;
 
   for (int j = 0; j < BLOCKNUM; j++) {
     uint16_t u16Azimuth = pAzimuth->GetAzimuth();

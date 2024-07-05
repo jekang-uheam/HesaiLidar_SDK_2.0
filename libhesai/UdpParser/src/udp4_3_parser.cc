@@ -349,6 +349,7 @@ int Udp4_3Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const
               pHeader->GetBlockNum() +
           sizeof(HS_LIDAR_BODY_CRC_ST_V3));
   if (pHeader->HasSeqNum()) {
+    /* clean-up
     const HS_LIDAR_TAIL_SEQ_NUM_ST_V3 *pTailSeqNum =
         reinterpret_cast<const HS_LIDAR_TAIL_SEQ_NUM_ST_V3 *>(
             (const unsigned char *)pHeader + sizeof(HS_LIDAR_HEADER_ST_V3) +
@@ -357,6 +358,7 @@ int Udp4_3Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const
              sizeof(HS_LIDAR_BODY_CHN_NNIT_ST_V3) * pHeader->GetLaserNum()) *
                 pHeader->GetBlockNum() +
             sizeof(HS_LIDAR_BODY_CRC_ST_V3) + sizeof(HS_LIDAR_TAIL_ST_V3));      
+    */
     // pTailSeqNum->CalPktLoss(this->start_seqnum_, this->last_seqnum_, this->loss_count_, this->start_time_);
   }        
   this->spin_speed_ = pTail->m_i16MotorSpeed;
@@ -368,8 +370,8 @@ int Udp4_3Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const
   frame.scan_complete = false;
 
   int index = frame.packet_index * pHeader->GetBlockNum() * pHeader->GetLaserNum();
-  float minAzimuth = 0;
-  float maxAzimuth = 0;
+  // code-clean // float minAzimuth = 0;
+  // code-clean // float maxAzimuth = 0;
   const HS_LIDAR_BODY_AZIMUTH_ST_V3 *pAzimuth =
       reinterpret_cast<const HS_LIDAR_BODY_AZIMUTH_ST_V3 *>(
           (const unsigned char *)pHeader + sizeof(HS_LIDAR_HEADER_ST_V3));
@@ -415,8 +417,10 @@ int Udp4_3Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const
       frame.scan_complete = true;
     }
     this->last_azimuth_ = u16Azimuth;
+    /* code-clean
     if(blockid  == 0 ) minAzimuth =  azimuth;
     else maxAzimuth = azimuth;
+    */
     
   }
   frame.packet_index++;
@@ -426,7 +430,7 @@ int Udp4_3Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const
 template<typename T_Point>
 int Udp4_3Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet){
   for (int blockid = 0; blockid < packet.block_num; blockid++) {
-    T_Point point;
+    // clean-up // T_Point point;
     int Azimuth = packet.azimuth[blockid * packet.laser_num];
     int count = 0, field = 0;
     if ( this->get_correction_file_) {

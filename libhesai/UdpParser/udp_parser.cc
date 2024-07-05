@@ -112,7 +112,9 @@ void UdpParser<T_Point>::CreatGeneralParser(uint8_t major, uint8_t minor) {
     {
       switch (minor) {
         case 4:
-          parser_ = new Udp1_4Parser<T_Point>();
+          // parser_ = new Udp1_4Parser<T_Point>();
+          std::cout << "SV_P128_Parser version : " << major << "." << minor << std::endl;
+          parser_ = new SV_P128_Parser<T_Point>();
           lidar_type_decoded_ = "Pandar128";
           break;
 
@@ -212,7 +214,9 @@ void UdpParser<T_Point>::CreatGeneralParser(const UdpPacket& packet) {
       PKT_SIZE_20 == packet.packet_len || PKT_SIZE_20 + 4 == packet.packet_len) {
 
     // Pandar64
-    parser_ = new UdpP64Parser<T_Point>();  
+    // parser_ = new UdpP64Parser<T_Point>();
+    std::cout << "SV_P64_Parser UdpPacket " << std::endl;
+    parser_ = new SV_P64_Parser<T_Point>();
     lidar_type_decoded_ = "Pandar64";
     return;
   }
@@ -234,13 +238,21 @@ void UdpParser<T_Point>::CreatGeneralParser(std::string lidar_type) {
   if (lidar_type == "AT128" || lidar_type == "AT128E2X" || lidar_type == "AT128E3X") {
     parser_ = new Udp4_3Parser<T_Point>();
   } else if (lidar_type == "Pandar128E3X" || lidar_type == "Pandar128") {
-    parser_ = new Udp1_4Parser<T_Point>();
+    // parser_ = new Udp1_4Parser<T_Point>();
+    std::cout << "SV_P128_Parser lidar_type : " << lidar_type << std::endl;
+    parser_ = new SV_P128_Parser<T_Point>();
   } else if (lidar_type == "Pandar40S" || lidar_type == "Pandar40E3X") {
-    parser_ = new Udp1_4Parser<T_Point>();
+    // parser_ = new Udp1_4Parser<T_Point>();
+    std::cout << "SV_P128_Parser lidar_type : " << lidar_type << std::endl;
+    parser_ = new SV_P128_Parser<T_Point>();
   } else if (lidar_type == "Pandar60S" || lidar_type == "Pandar64E3X") {
-    parser_ = new Udp1_4Parser<T_Point>();
+    // parser_ = new Udp1_4Parser<T_Point>();
+    std::cout << "SV_P128_Parser lidar_type : " << lidar_type << std::endl;
+    parser_ = new SV_P128_Parser<T_Point>();
   } else if (lidar_type == "Pandar90" || lidar_type == "Pandar90E3X") {
-    parser_ = new Udp1_4Parser<T_Point>();  
+    // parser_ = new Udp1_4Parser<T_Point>();
+    std::cout << "SV_P128_Parser lidar_type : " << lidar_type << std::endl;
+    parser_ = new SV_P128_Parser<T_Point>();
   } else if (lidar_type == "PandarXT") {
     parser_ = new Udp6_1Parser<T_Point>();
   } else if (lidar_type == "PandarXT16" || lidar_type == "PandarXT-16") {
@@ -254,7 +266,9 @@ void UdpParser<T_Point>::CreatGeneralParser(std::string lidar_type) {
   } else if (lidar_type == "PandarQT128" || lidar_type == "QT128C2X") {
     parser_ = new Udp3_2Parser<T_Point>();
   } else if (lidar_type == "Pandar64") {
-    parser_ = new UdpP64Parser<T_Point>();
+    // parser_ = new UdpP64Parser<T_Point>();
+    std::cout << "SV_P64_Parser lidar_type : " << lidar_type << std::endl;
+    parser_ = new SV_P64_Parser<T_Point>();
   } else if (lidar_type == "Pandar40" || lidar_type == "Pandar40P") {
     parser_ = new UdpP40Parser<T_Point>();
   } else if (lidar_type == "PandarFT120" || lidar_type == "FT120C1X") {
@@ -310,9 +324,15 @@ uint16_t *UdpParser<T_Point>::GetMonitorInfo2() {
 
 template<typename T_Point>
 uint16_t *UdpParser<T_Point>::GetMonitorInfo3() {
+  /* code-clean
   if (parser_ != nullptr) {
     return parser_->GetMonitorInfo3();
   }
+  */
+  if (nullptr == parser_) {
+    return nullptr;
+  }
+  return parser_->GetMonitorInfo3();
 }
 
 template<typename T_Point>
@@ -320,9 +340,12 @@ int UdpParser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDeco
   if (parser_ == nullptr) {
     return -1;
   }
+  /* code-clean
   if (parser_ != nullptr) {
     return parser_->ComputeXYZI(frame, packet);
   }
+  */
+  return parser_->ComputeXYZI(frame, packet);
 }
 
 template<typename T_Point>
@@ -373,7 +396,7 @@ int UdpParser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const Ud
   if (parser_ != nullptr) {
     return parser_->DecodePacket(frame, udpPacket);
   }
-
+  return -1;
 }
 
 

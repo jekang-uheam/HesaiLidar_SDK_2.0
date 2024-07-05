@@ -108,6 +108,7 @@ typedef struct LidarPointRTHI {
   int radius;
   int intensity;
 } LidarPointRTHI;
+
 template <typename PointT>
 struct LidarDecodedPacket {
   uint64_t host_timestamp;
@@ -333,6 +334,38 @@ struct FaultMessageInfo {
   uint32_t crc;
   uint8_t cycber_security[32];
 };
+
+typedef struct SVPoint_s {
+  float x;
+  float y;
+  float z;
+  float intensity;
+  double timestamp;
+  uint16_t ring;
+  uint16_t angle;
+} __attribute__((__packed__)) SVPoint_t;
+
+typedef struct SVDecodedPacket_s {
+  int packet_index;
+  uint64_t host_timestamp;
+  uint64_t sensor_timestamp;
+
+  uint16_t spin_speed;
+  uint8_t lidar_state;
+  uint8_t work_mode;
+
+  int temperature;  // 0.01
+  uint32_t accel_unit;
+  uint32_t velocity_unit;
+
+  int x_axis_accel;
+  int y_axis_accel;
+  int z_axis_accel;
+
+  int x_axis_velocity;
+  int y_axis_velocity;
+  int z_axis_velocity;
+} __attribute__((__packed__)) SVDecodedPacket_t;
 
 }  // namespace lidar
 }  // namespace hesai

@@ -132,13 +132,10 @@ inline typename std::enable_if<PANDAR_HAS_MEMBER(T_Point, timestamp)>::type setT
 }
 
 template <typename T_Point>
-inline typename std::enable_if<!PANDAR_HAS_MEMBER(T_Point, angle)>::type setAngle(T_Point& point,
-                                                                                      const int& value) {
+inline typename std::enable_if<!PANDAR_HAS_MEMBER(T_Point, angle)>::type setAngle(T_Point& point, const uint16_t& value) {
 }
-
 template <typename T_Point>
-inline typename std::enable_if<PANDAR_HAS_MEMBER(T_Point, angle)>::type setAngle(T_Point& point,
-                                                                                     const int& value) {
+inline typename std::enable_if<PANDAR_HAS_MEMBER(T_Point, angle)>::type setAngle(T_Point& point, const uint16_t& value) {
   point.angle = value;
 }
 

@@ -43,12 +43,12 @@ Udp6_1Parser<T_Point>::Udp6_1Parser() {
   block_num_ = 6; 
 }
 template<typename T_Point>
-Udp6_1Parser<T_Point>::~Udp6_1Parser() { printf("release general parser\n"); }
+Udp6_1Parser<T_Point>::~Udp6_1Parser() { printf("Udp6_1Parser release general parser\n"); }
 
 template<typename T_Point>
 int Udp6_1Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet) {
   for (int blockid = 0; blockid < packet.block_num; blockid++) {
-    T_Point point;
+    // clean-up // T_Point point;
     int elevation = 0;
     int azimuth = 0;
 
@@ -131,8 +131,8 @@ int Udp6_1Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, con
   output.scan_complete = false;
   output.distance_unit = pHeader->GetDistUnit();
   int index = 0;
-  float minAzimuth = 0;
-  float maxAzimuth = 0;
+  // clean-up // float minAzimuth = 0;
+  // clean-up // float maxAzimuth = 0;
   output.block_num = pHeader->GetBlockNum();
   output.laser_num = pHeader->GetLaserNum();
   
@@ -194,10 +194,10 @@ void Udp6_1Parser<T_Point>::GetDistanceCorrection(int const& aziOrigin,
                                                       ) {
     int aziCal = (aziOrigin + aziDelt) % CIRCLE;                                                    
     if(distance <= 0.1) {
-      float xyDistance = distance * this->cos_all_angle_[(elevation)];
-      float x = xyDistance * this->sin_all_angle_[(aziCal)];
-      float y = xyDistance * this->cos_all_angle_[(aziCal)];
-      float z = distance * this->sin_all_angle_[(elevation)];
+      // clean-up // float xyDistance = distance * this->cos_all_angle_[(elevation)];
+      // clean-up // float x = xyDistance * this->sin_all_angle_[(aziCal)];
+      // clean-up // float y = xyDistance * this->cos_all_angle_[(aziCal)];
+      // clean-up // float z = distance * this->sin_all_angle_[(elevation)];
       return;
     }
     switch (block_num_) {

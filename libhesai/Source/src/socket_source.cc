@@ -127,7 +127,7 @@ bool SocketSource::Open() {
           return false;
         }
       } else {
-        printf("SocketSource::Open succeed, sock:%d\n", udp_sock_);
+        printf("SocketSource::Open succeed, sock:%ld\n", udp_sock_);
       }
     } else {
       printf("setsockopt SO_RCVTIMEO failed, errno:%d\n", errno);
@@ -170,7 +170,7 @@ bool SocketSource::IsOpened() {
 
   if (udp_port_ == 0 || udp_sock_ < 0) {
     ret = false;
-    printf("SocketSource::IsOpened(), port %d, sock %d\n", udp_port_,
+    printf("SocketSource::IsOpened(), port %d, sock %ld\n", udp_port_,
            udp_sock_);
   }
 

@@ -204,7 +204,7 @@ int Udp7_2Parser<T_Point>::LoadCorrectionDatData(char *correction_string) {
 
 template<typename T_Point>
 int Udp7_2Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet) {
-  T_Point point;
+  // clean-up // T_Point point;
   for (int i = 0; i < packet.laser_num; i++) {
     int point_index = packet.packet_index * packet.points_num + i;
     float distance = packet.distances[i] * packet.distance_unit;
@@ -264,8 +264,8 @@ int Udp7_2Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, con
   output.scan_complete = false;
   output.distance_unit = pHeader->GetDistUnit();
   int index = 0;
-  float minAzimuth = 0;
-  float maxAzimuth = 0;
+  // clean-up // float minAzimuth = 0;
+  // clean-up // float maxAzimuth = 0;
   output.block_num = 1;
   output.laser_num = pHeader->GetChannelNum();
 

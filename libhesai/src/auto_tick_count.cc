@@ -1,4 +1,4 @@
-﻿/************************************************************************************************
+/************************************************************************************************
 Copyright (C) 2023 Hesai Technology Co., Ltd.
 Copyright (C) 2023 Original Authors
 All rights reserved.
@@ -111,7 +111,7 @@ int TickCount::ShowTimeSlice(std::string sLogFile, bool bSaveSysTime) {
 
     if (pFileSel != NULL) fprintf(pFileSel, "%s:\n", iter->first.c_str());
 
-    for (int i = 0; i < iter->second.size(); i++) {
+    for (size_t i = 0; i < iter->second.size(); i++) {
       std::cout << "  " << static_cast<double>(iter->second.at(i)) / kMicroToSec
                 << "s\n";
 

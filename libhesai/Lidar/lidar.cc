@@ -31,7 +31,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <stdio.h>
 
-#include "../../build/Version.h"
+// #include "../../build/Version.h"
 #include "lidar_types.h"
 #ifndef _MSC_VER
 #include <unistd.h>
@@ -136,17 +136,17 @@ int Lidar<T_Point>::Init(const DriverParam &param) {
   /********************************************************************************/
 
   /***************************Init decoder****************************************/
-  clock_t start_time, end_time;
-  double time_interval = 0;
+  // code-clean // clock_t start_time, end_time;
+  // code-clean // double time_interval = 0;
   UdpPacket udp_packet;
   LidarDecodedPacket<T_Point> decoded_packet;
-  start_time = clock();
+  // code-clean // start_time = clock();
   while (udp_parser_->GetParser() == nullptr) {
     int ret = this->GetOnePacket(udp_packet);
     if (ret == -1) continue;
     this->DecodePacket(decoded_packet, udp_packet);
-    end_time = clock();
-    time_interval = double(end_time - start_time) / CLOCKS_PER_SEC;
+    // code-clean // end_time = clock();
+    // code-clean // time_interval = double(end_time - start_time) / CLOCKS_PER_SEC;
   }
   if (udp_parser_->GetParser() == nullptr) {
     return res;
@@ -261,7 +261,7 @@ int Lidar<T_Point>::SaveUdpPacket(const std::string &record_path,
 
 template <typename T_Point>
 int Lidar<T_Point>::ComputeXYZI(LidarDecodedPacket<T_Point> &packet) {
-  int ret = -1;
+  // clean-up // int ret = -1;
   decoded_packets_buffer_.push_back(std::move(packet));
   return 0;
 }
@@ -290,7 +290,8 @@ int Lidar<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const UdpPac
 
 template <typename T_Point>
 bool Lidar<T_Point>::ComputeXYZIComplete(int index) {
-  return frame_.packet_num == index;
+  // code-clean // return frame_.packet_num == index;
+  return (index >= 0) && (frame_.packet_num == static_cast<uint32_t>(index));
 }
 
 template <typename T_Point>
@@ -366,7 +367,7 @@ int Lidar<T_Point>::GetGeneralParser(GeneralParser<T_Point> **parser) {
 template <typename T_Point>
 void Lidar<T_Point>::RecieveUdpThread() {
   if (!udp_thread_running_) return;
-  uint32_t u32StartTime = GetMicroTickCount();
+  // clean-up // uint32_t u32StartTime = GetMicroTickCount();
   std::cout << "Lidar::Recieve Udp Thread start to run\n";
 #ifdef _MSC_VER
   SetThreadPriorityWin(THREAD_PRIORITY_TIME_CRITICAL);
@@ -450,7 +451,7 @@ void Lidar<T_Point>::ParserThread() {
 
 template <typename T_Point>
 void Lidar<T_Point>::HandleThread(int nThreadNum) {
-  struct timespec timeout;
+  // clean-up // struct timespec timeout;
 #ifdef _MSC_VER
   SetThreadPriorityWin(THREAD_PRIORITY_TIME_CRITICAL);
 #else

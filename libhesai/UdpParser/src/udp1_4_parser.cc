@@ -49,7 +49,7 @@ Udp1_4Parser<T_Point>::Udp1_4Parser() {
 }
 
 template <typename T_Point>
-Udp1_4Parser<T_Point>::~Udp1_4Parser() { printf("release general parser\n"); }
+Udp1_4Parser<T_Point>::~Udp1_4Parser() { printf("Udp1_4Parser release general parser\n"); }
 
 template <typename T_Point>
 void Udp1_4Parser<T_Point>::LoadFiretimesFile(std::string firetimes_path) {
@@ -167,6 +167,7 @@ int Udp1_4Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarD
       setIntensity(frame.points[point_index], packet.reflectivities[blockid * packet.laser_num + i]);
       setTimestamp(frame.points[point_index], double(packet.sensor_timestamp) / kMicrosecondToSecond);
       setRing(frame.points[point_index], i);
+      setAngle(frame.points[point_index], Azimuth);
     }
   }
   frame.points_num += packet.points_num;
