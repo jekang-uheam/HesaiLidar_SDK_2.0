@@ -20,6 +20,23 @@ SV_P128_Parser<T_Point>::SV_P128_Parser()
   this->return_mode_ = 0;
   distance_correction_para_c_ = std::sqrt(distance_correction_para_b_ * distance_correction_para_b_ + distance_correction_para_h_ * distance_correction_para_h_);
   distance_correction_para_d_ = std::atan(distance_correction_para_b_ / distance_correction_para_h_);
+
+  const size_t kBlockOffsetSize = 2;
+
+  block_offset_128_single_high_resolution_.reserve(kBlockOffsetSize);
+  // Block 1 (3.148 - 27.778)
+  block_offset_128_single_high_resolution_[0] = 3.148f - 27.778f;
+  // Block 2 (3.148)
+  block_offset_128_single_high_resolution_[1] = 3.148f;
+
+  block_offset_128_single_standard_.reserve(kBlockOffsetSize);
+  // Block 1 (3.148 - 27.778 * 2)
+  block_offset_128_single_standard_[0] = 3.148f - (27.778f * 2.0f);
+  // Block 2 (3.148)
+  block_offset_128_single_standard_[1] = 3.148f;
+
+  // Block 1 & 2 (3.148)
+  block_offset_128_dual_ = 3.148f;
 }
 
 template <typename T_Point>
@@ -145,9 +162,10 @@ int SV_P128_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, c
   }
 
   int index = 0;
-  uint8_t operation_mode = tail->getOperationMode();
+  operation_mode_ = tail->getOperationMode();
   for (uint8_t i = 0; i < header->GetBlockNum(); ++i) {
     uint8_t angle_state = tail->getAngleState(i);
+    output.azimuth_state[i] = tail->getAngleState(i);
     uint16_t u16_azimuth = azimuth->GetAzimuth();
     output.azimuths = u16_azimuth;
 
@@ -164,7 +182,7 @@ int SV_P128_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, c
         output.azimuth[index] = u16_azimuth;
 
         if (this->get_firetime_file_) {
-          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode, angle_state, chn_unit->GetDistance()));
+          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode_, angle_state, chn_unit->GetDistance()));
         }
 
         output.reflectivities[index] = chn_unit->GetReflectivity();
@@ -185,7 +203,7 @@ int SV_P128_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, c
       for (uint8_t j = 0; j < header->GetLaserNum(); ++j) {
         output.azimuth[index] = u16_azimuth;
         if (this->get_firetime_file_) {
-          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode, angle_state, chn_unit_no_conf->GetDistance()));
+          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode_, angle_state, chn_unit_no_conf->GetDistance()));
         }
 
         output.reflectivities[index] = chn_unit_no_conf->GetReflectivity();
@@ -212,14 +230,18 @@ int SV_P128_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, Lida
 
   int azimuth = 0;
   int elevation = 0;
-  for (uint16_t block_id = 0; block_id < packet.block_num; ++block_id) {
+  size_t valid_points = 0;
+  for (uint16_t j = 0; j < packet.block_num; ++j) {
+    azimuth = 0;
+    elevation = 0;
     for (uint16_t i = 0; i < packet.laser_num; ++i) {
-      int point_index = (packet.packet_index * packet.points_num) + (block_id * packet.laser_num) + i;
-      float distance = packet.distances[block_id * packet.laser_num + i] * packet.distance_unit;
+      int block_id = (packet.laser_num * j) + i;
+      int point_index = (packet.packet_index * packet.points_num) + block_id;
+      float distance = packet.distances[block_id] * packet.distance_unit;
       if (this->get_correction_file_) {
         elevation = this->elevation_correction_[i] * kResolutionInt;
         elevation = (CIRCLE + elevation) % CIRCLE;
-        azimuth = static_cast<int>(packet.azimuth[block_id * packet.laser_num]) + (this->azimuth_collection_[i] * kResolutionInt);
+        azimuth = static_cast<int>(packet.azimuth[j * packet.laser_num]) + (this->azimuth_collection_[i] * kResolutionInt);
         azimuth = (CIRCLE + azimuth) % CIRCLE;
       }
 
@@ -233,16 +255,61 @@ int SV_P128_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, Lida
       float z = distance * this->sin_all_angle_[(elevation)];
       this->TransformPoint(x, y, z);
 
+      double block_offset = 0.0;
+      double firetime_offset = 0.0;
+      int firing_type = packet.distances[block_id] >= section_distance_ ? 0 : 1;
+
+      if (operation_mode_ == 0) {
+        // high resolution
+        if (this->is_dual_return_) {
+          block_offset = block_offset_128_dual_;
+        } else {
+          block_offset = block_offset_128_single_high_resolution_[j];
+        }
+        firetime_offset = firetime_section_values[i].section_values[packet.azimuth_state[j]].firetime[firing_type];
+      } else if (operation_mode_ == 2) {
+        // standard
+        if (this->is_dual_return_) {
+          block_offset = block_offset_128_dual_;
+        } else {
+          block_offset = block_offset_128_single_standard_[j];
+        }
+        firetime_offset = firetime_section_values[i].section_values[4 + packet.azimuth_state[j]].firetime[firing_type];
+      } else if (operation_mode_ == 3) {
+        // energy saving
+        if (this->is_dual_return_) {
+          block_offset = block_offset_128_dual_;
+        } else {
+          block_offset = block_offset_128_single_standard_[j];
+        }
+        firetime_offset = firetime_section_values[i].section_values[6 + packet.azimuth_state[j]].firetime[firing_type];
+      }
+
+      double timestamp = double(packet.sensor_timestamp) + block_offset + (firetime_offset / 1000.0f);
+
       setX(frame.points[point_index], x);
       setY(frame.points[point_index], y);
       setZ(frame.points[point_index], z);
-      setIntensity(frame.points[point_index], packet.reflectivities[block_id * packet.laser_num + i]);
-      setTimestamp(frame.points[point_index], double(packet.sensor_timestamp) / kMicrosecondToSecond);
+      setIntensity(frame.points[point_index], packet.reflectivities[block_id]);
+      setTimestamp(frame.points[point_index], timestamp / kMicrosecondToSecond);
       setRing(frame.points[point_index], i);
-      setAngle(frame.points[point_index], static_cast<int>(packet.azimuth[block_id * packet.laser_num]));
+      setAngle(frame.points[point_index], static_cast<int>(packet.azimuth[j * packet.laser_num]));
+
+      if (distance <= 0.1 || distance > 200.0) {
+        if (x != 0 || y != 0 || z != 0) {
+          printf("%lf (%f, %f, %f)\n", distance, x, y, z);
+        }
+
+        // timestamp < 0 == wrong point
+        // for checking data, insert checking to last.
+        setTimestamp(frame.points[point_index], -100);
+      } else {
+        ++valid_points;
+      }
     }
   }
   frame.points_num += packet.points_num;
+  frame.valid_points_num += valid_points;
   frame.packet_num = packet.packet_index;
   return 0;
 }
@@ -251,7 +318,7 @@ template <typename T_Point>
 void SV_P128_Parser<T_Point>::LoadFiretimesFile(std::string firetimes_path) {
   std::ifstream in_file(firetimes_path, std::ios::in);
   if (!in_file.is_open()) {
-    std::cout << "Open firetime file failed" << std::endl;
+    std::cout << "Open firetime file failed (" << firetimes_path << ")" << std::endl;
     this->get_firetime_file_ = false;
     return;
   }

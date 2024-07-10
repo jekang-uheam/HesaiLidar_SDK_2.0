@@ -113,7 +113,8 @@ void GeneralParser<T_Point>::LoadCorrectionFile(std::string correction_path) {
 }
 template <typename T_Point>
 int GeneralParser<T_Point>::LoadCorrectionString(char *correction_content) {
-  std::string correction_content_str = correction_content;
+  std::string correction_content_str(correction_content);
+  // std::string correction_content_str = correction_content;
   std::istringstream ifs(correction_content_str);
   std::string line;
 

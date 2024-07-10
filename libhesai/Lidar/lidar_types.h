@@ -66,6 +66,9 @@ static constexpr float kResolutionFloat = 100.0f;
 // conversion factor between second and micorsecond
 static constexpr float kMicrosecondToSecond = 1000000.0f;
 static constexpr int kMicrosecondToSecondInt = 1000000;
+// conversion factor between second and nanosecond
+static constexpr float kNanosecondToSecond = 1000000000.0f;
+static constexpr int kNanosecondToSecondInt = 1000000000;
 // the difference between last azimuth and current azimuth must be greater than this angle in split frame function,
 // to avoid split frame unsuccessfully
 static constexpr uint16_t kSplitFrameMinAngle = 300;
@@ -84,6 +87,9 @@ static constexpr int kMaxTimeInterval = 150000;
 static constexpr int kFaultMessageLength = 99;
 
 static constexpr int kPacketBufferSize = 36000;
+
+static constexpr int kBlockMaxSize = 10;
+
 // default udp data max lenth
 static const uint16_t kBufSize = 1500;
 typedef struct LidarPointXYZI {
@@ -132,50 +138,29 @@ struct LidarDecodedPacket {
   bool IsDecodedPacketValid() {
     return block_num != 0;
   }
+  uint8_t azimuth_state[kBlockMaxSize];
 };
 
 template <typename PointT>
 class LidarDecodedFrame {
  public:
-  LidarDecodedFrame() {
-    points_num = 0;
-    packet_index = 0;
-    distance_unit = 0.0;
-    points = new PointT[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket];
-    sensor_timestamp = new uint64_t[kMaxPacketNumPerFrame];
-    azimuths = new uint16_t[kMaxPacketNumPerFrame];
-    azimuth = new float[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket];
-    elevation = new float[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket];
-    distances = new uint16_t[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket];
-    reflectivities = new uint8_t[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket];
-    host_timestamp = 0;
-    major_version = 0;
-    minor_version = 0;
-    return_mode = 0;
-    spin_speed = 0;
-    points_num = 0;
-    packet_num = 0;
-    block_num = 0;
-    laser_num = 0;
-    packet_index = 0;
-    scan_complete = false;
-    distance_unit = 0;
-    frame_index = 0;
-  };
+  LidarDecodedFrame()
+      : host_timestamp(0), sensor_timestamp(new uint64_t[kMaxPacketNumPerFrame]), major_version(0), minor_version(0), return_mode(0), spin_speed(0), points_num(0), packet_num(0), valid_points_num(0), points(new PointT[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), azimuths(new uint16_t[kMaxPacketNumPerFrame]), reflectivities(new uint8_t[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), azimuth(new float[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), elevation(new float[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), distances(new uint16_t[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), block_num(0), laser_num(0), packet_index(0), scan_complete(false), distance_unit(0), lidar_state(-1), work_mode(-1) {
+        };
   ~LidarDecodedFrame() {
-    delete points;
+    delete[] points;
     points = nullptr;
-    delete sensor_timestamp;
+    delete[] sensor_timestamp;
     sensor_timestamp = nullptr;
-    delete azimuths;
+    delete[] azimuths;
     azimuths = nullptr;
-    delete distances;
+    delete[] distances;
     distances = nullptr;
-    delete reflectivities;
+    delete[] reflectivities;
     reflectivities = nullptr;
-    delete azimuth;
+    delete[] azimuth;
     azimuth = nullptr;
-    delete elevation;
+    delete[] elevation;
     elevation = nullptr;
   }
   void Update() {
@@ -186,6 +171,7 @@ class LidarDecodedFrame {
     spin_speed = 0;
     points_num = 0;
     packet_num = -1;
+    valid_points_num = 0;
     block_num = 0;
     laser_num = 0;
     packet_index = 0;
@@ -203,6 +189,7 @@ class LidarDecodedFrame {
   uint16_t spin_speed;
   uint32_t points_num;
   uint32_t packet_num;
+  uint32_t valid_points_num;
   PointT* points;
   uint16_t* azimuths;
   uint8_t* reflectivities;
