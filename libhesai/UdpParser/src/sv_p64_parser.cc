@@ -32,7 +32,11 @@ int SV_P64_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, co
 
   this->spin_speed_ = tail_ptr->GetMotorSpeed();
   output.spin_speed = tail_ptr->m_u16MotorSpeed;
+
   this->is_dual_return_ = tail_ptr->IsDualReturn();
+  output.work_mode = 2;
+
+  output.return_mode = tail_ptr->GetReturnMode();
 
   output.host_timestamp = GetMicroTickCountU64();
   output.points_num = header_ptr->GetBlockNum() * header_ptr->GetLaserNum();
@@ -81,6 +85,11 @@ template <typename T_Point>
 int SV_P64_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet) {
   int azimuth = 0;
   int elevation = 0;
+
+  frame.laser_num = packet.laser_num;
+  frame.spin_speed = packet.spin_speed;
+  frame.return_mode = packet.return_mode;
+  frame.work_mode = packet.work_mode;
 
   for (uint16_t j = 0; j < packet.block_num; ++j) {
     azimuth = 0;
