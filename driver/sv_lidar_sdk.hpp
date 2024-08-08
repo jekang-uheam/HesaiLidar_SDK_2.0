@@ -51,8 +51,7 @@ class SVLidarSdk {
       u8Array_t s_data;
       for (int i = 0; i < 3; ++i) {
         int ret = lidar_ptr_->ptc_client_->GetCorrectionInfo(s_data);
-        std::string correction_str = std::string((char*)s_data.data(), s_data.size());
-        if (ret != 0 || lidar_ptr_->udp_parser_->LoadCorrectionString((char*)correction_str.c_str()) != 0) {
+        if (ret != 0 || lidar_ptr_->udp_parser_->LoadCorrectionString((char*)s_data.data()) != 0) {
           lidar_ptr_->udp_parser_->LoadCorrectionFile(param.input_param.correction_file_path);
         } else {
           break;

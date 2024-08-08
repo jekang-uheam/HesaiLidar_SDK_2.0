@@ -139,7 +139,6 @@ struct LidarDecodedPacket {
   bool IsDecodedPacketValid() {
     return block_num != 0;
   }
-  uint8_t azimuth_state[kBlockMaxSize];
 };
 
 template <typename PointT>
@@ -165,7 +164,6 @@ class LidarDecodedFrame {
     spin_speed = 0;
     points_num = 0;
     packet_num = -1;
-    valid_points_num = 0;
     block_num = 0;
     laser_num = 0;
     packet_index = 0;

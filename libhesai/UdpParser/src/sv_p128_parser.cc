@@ -20,23 +20,6 @@ SV_P128_Parser<T_Point>::SV_P128_Parser()
   this->return_mode_ = 0;
   distance_correction_para_c_ = std::sqrt(distance_correction_para_b_ * distance_correction_para_b_ + distance_correction_para_h_ * distance_correction_para_h_);
   distance_correction_para_d_ = std::atan(distance_correction_para_b_ / distance_correction_para_h_);
-
-  const size_t kBlockOffsetSize = 2;
-
-  block_offset_128_single_high_resolution_.reserve(kBlockOffsetSize);
-  // Block 1 (3.148 - 27.778)
-  block_offset_128_single_high_resolution_[0] = 3.148f - 27.778f;
-  // Block 2 (3.148)
-  block_offset_128_single_high_resolution_[1] = 3.148f;
-
-  block_offset_128_single_standard_.reserve(kBlockOffsetSize);
-  // Block 1 (3.148 - 27.778 * 2)
-  block_offset_128_single_standard_[0] = 3.148f - (27.778f * 2.0f);
-  // Block 2 (3.148)
-  block_offset_128_single_standard_[1] = 3.148f;
-
-  // Block 1 & 2 (3.148)
-  block_offset_128_dual_ = 3.148f;
 }
 
 template <typename T_Point>
@@ -327,10 +310,9 @@ int SV_P128_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, c
   }
 
   int index = 0;
-  operation_mode_ = tail->getOperationMode();
+  uint8_t operation_mode = tail->getOperationMode();
   for (uint8_t i = 0; i < header->GetBlockNum(); ++i) {
     uint8_t angle_state = tail->getAngleState(i);
-    output.azimuth_state[i] = tail->getAngleState(i);
     uint16_t u16_azimuth = azimuth->GetAzimuth();
     output.azimuths = u16_azimuth;
 
@@ -347,7 +329,7 @@ int SV_P128_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, c
         output.azimuth[index] = u16_azimuth;
 
         if (this->get_firetime_file_) {
-          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode_, angle_state, chn_unit->GetDistance()));
+          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode, angle_state, chn_unit->GetDistance()));
         }
 
         output.reflectivities[index] = chn_unit->GetReflectivity();
@@ -368,7 +350,7 @@ int SV_P128_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, c
       for (uint8_t j = 0; j < header->GetLaserNum(); ++j) {
         output.azimuth[index] = u16_azimuth;
         if (this->get_firetime_file_) {
-          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode_, angle_state, chn_unit_no_conf->GetDistance()));
+          output.azimuth[index] += (kResolutionInt * GetFiretimesCorrection(i, this->spin_speed_, operation_mode, angle_state, chn_unit_no_conf->GetDistance()));
         }
 
         output.reflectivities[index] = chn_unit_no_conf->GetReflectivity();

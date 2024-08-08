@@ -198,11 +198,6 @@ class GeneralParser {
   // set enable_packet_loss_tool_
   virtual void EnablePacketLossTool(bool enable);
 
-  // Get angle correction file path
-  virtual std::string GetAngleCorrectionFilePath() { return ""; }
-  // Get firetime correction file path
-  virtual std::string GetFiretimeCorrectionFilePath() { return ""; }
-
   void TransformPoint(float& x, float& y, float& z);
   void SetTransformPara(float x, float y, float z, float roll, float pitch, float yaw);
   void EnableUpdateMonitorInfo();
