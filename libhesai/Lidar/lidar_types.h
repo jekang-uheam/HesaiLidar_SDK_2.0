@@ -135,6 +135,7 @@ struct LidarDecodedPacket {
   uint16_t spin_speed;
   uint8_t lidar_state;
   uint8_t work_mode;
+  uint16_t return_mode;
   bool IsDecodedPacketValid() {
     return block_num != 0;
   }
@@ -145,23 +146,16 @@ template <typename PointT>
 class LidarDecodedFrame {
  public:
   LidarDecodedFrame()
-      : host_timestamp(0), sensor_timestamp(new uint64_t[kMaxPacketNumPerFrame]), major_version(0), minor_version(0), return_mode(0), spin_speed(0), points_num(0), packet_num(0), valid_points_num(0), points(new PointT[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), azimuths(new uint16_t[kMaxPacketNumPerFrame]), reflectivities(new uint8_t[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), azimuth(new float[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), elevation(new float[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), distances(new uint16_t[kMaxPacketNumPerFrame * kMaxPointsNumPerPacket]), block_num(0), laser_num(0), packet_index(0), scan_complete(false), distance_unit(0), lidar_state(-1), work_mode(-1) {
+      : host_timestamp(0), sensor_timestamp(kMaxPacketNumPerFrame), major_version(0), minor_version(0), return_mode(0), spin_speed(0), points_num(0), packet_num(0), points(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), azimuths(kMaxPacketNumPerFrame), reflectivities(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), azimuth(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), elevation(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), distances(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), block_num(0), laser_num(0), packet_index(0), scan_complete(false), distance_unit(0), lidar_state(-1), work_mode(-1) {
         };
   ~LidarDecodedFrame() {
-    delete[] points;
-    points = nullptr;
-    delete[] sensor_timestamp;
-    sensor_timestamp = nullptr;
-    delete[] azimuths;
-    azimuths = nullptr;
-    delete[] distances;
-    distances = nullptr;
-    delete[] reflectivities;
-    reflectivities = nullptr;
-    delete[] azimuth;
-    azimuth = nullptr;
-    delete[] elevation;
-    elevation = nullptr;
+    points.clear();
+    sensor_timestamp.clear();
+    azimuths.clear();
+    distances.clear();
+    reflectivities.clear();
+    azimuth.clear();
+    elevation.clear();
   }
   void Update() {
     host_timestamp = 0;
@@ -182,20 +176,19 @@ class LidarDecodedFrame {
     frame_index++;
   }
   uint64_t host_timestamp;
-  uint64_t* sensor_timestamp;
+  std::vector<uint64_t> sensor_timestamp;
   uint8_t major_version;
   uint8_t minor_version;
   uint16_t return_mode;
   uint16_t spin_speed;
   uint32_t points_num;
   uint32_t packet_num;
-  uint32_t valid_points_num;
-  PointT* points;
-  uint16_t* azimuths;
-  uint8_t* reflectivities;
-  float* azimuth;
-  float* elevation;
-  uint16_t* distances;
+  std::vector<PointT> points;
+  std::vector<uint16_t> azimuths;
+  std::vector<uint8_t> reflectivities;
+  std::vector<float> azimuth;
+  std::vector<float> elevation;
+  std::vector<uint16_t> distances;
   uint16_t block_num;
   uint16_t laser_num;
   uint16_t packet_index;
