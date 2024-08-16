@@ -145,7 +145,7 @@ template <typename PointT>
 class LidarDecodedFrame {
  public:
   LidarDecodedFrame()
-      : host_timestamp(0), sensor_timestamp(kMaxPacketNumPerFrame), major_version(0), minor_version(0), return_mode(0), spin_speed(0), points_num(0), packet_num(0), points(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), azimuths(kMaxPacketNumPerFrame), reflectivities(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), azimuth(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), elevation(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), distances(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), block_num(0), laser_num(0), packet_index(0), scan_complete(false), distance_unit(0), lidar_state(-1), work_mode(-1) {
+      : host_timestamp(0), sensor_timestamp(kMaxPacketNumPerFrame), major_version(0), minor_version(0), return_mode(0), spin_speed(0), points_num(0), packet_num(0), points(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), azimuths(kMaxPacketNumPerFrame), reflectivities(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), azimuth(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), elevation(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), distances(kMaxPacketNumPerFrame * kMaxPointsNumPerPacket), block_num(0), laser_num(0), packet_index(0), scan_complete(false), distance_unit(0), lidar_state(-1), work_mode(-1), first_timestamp_(0.0) {
         };
   ~LidarDecodedFrame() {
     points.clear();
@@ -195,17 +195,24 @@ class LidarDecodedFrame {
   int frame_index;
   uint8_t lidar_state;
   uint8_t work_mode;
+  double first_timestamp_;
 };
 
-struct UdpPacket {
-  uint8_t buffer[1500];
-  int16_t packet_len;
-  bool is_timeout = false;
-  UdpPacket(const uint8_t* data = nullptr, uint32_t sz = 0)
-      : packet_len(sz) {
+typedef struct UdpPacket_s {
+ public:
+  UdpPacket_s(const uint8_t* data = nullptr, uint32_t sz = 0)
+      : packet_len(sz), timestamp(0), is_timeout(false) {
     memcpy(buffer, data, packet_len);
   }
-};
+  void set_timestamp(int64_t timestamp) {
+    this->timestamp = timestamp;
+  }
+
+  uint8_t buffer[1500];
+  int16_t packet_len;
+  int64_t timestamp;
+  bool is_timeout;
+} UdpPacket;
 
 typedef std::vector<uint8_t> u8Array_t;
 typedef std::vector<uint16_t> u16Array_t;

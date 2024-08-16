@@ -43,6 +43,7 @@ int SV_P64_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, co
   output.scan_complete = false;
 
   output.sensor_timestamp = tail_ptr->GetMicroLidarTimeU64();
+
   output.distance_unit = header_ptr->GetDistUnit();
 
   output.block_num = header_ptr->GetBlockNum();
@@ -77,7 +78,6 @@ int SV_P64_Parser<T_Point>::DecodePacket(LidarDecodedPacket<T_Point> &output, co
     }
     this->last_azimuth_ = azimuth_ptr->GetAzimuth();
   }
-
   return 0;
 }
 
@@ -113,9 +113,9 @@ int SV_P64_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, Lidar
 
       double timestamp = double(packet.sensor_timestamp) / kMicrosecondToSecond;
       if (this->is_dual_return_) {
-        timestamp -= static_cast<double>(kBlockOffsetDual[block_id] + kFiringOffset[i]) / kMicrosecondToSecond;
+        timestamp -= static_cast<double>(kBlockOffsetDual[j] + kFiringOffset[i]) / kMicrosecondToSecond;
       } else {
-        timestamp -= static_cast<double>(kBlockOffsetSingle[block_id] + kFiringOffset[i]) / kMicrosecondToSecond;
+        timestamp -= static_cast<double>(kBlockOffsetSingle[j] + kFiringOffset[i]) / kMicrosecondToSecond;
       }
 
       setX(frame.points[point_index], x);
@@ -125,6 +125,10 @@ int SV_P64_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, Lidar
       setTimestamp(frame.points[point_index], timestamp);
       setRing(frame.points[point_index], i);
       setAngle(frame.points[point_index], static_cast<int>(packet.azimuth[block_id]));
+
+      if (frame.first_timestamp_ == 0.0 || (timestamp > 0 && timestamp < frame.first_timestamp_)) {
+        frame.first_timestamp_ = timestamp;
+      }
     }
   }
   frame.points_num += packet.points_num;

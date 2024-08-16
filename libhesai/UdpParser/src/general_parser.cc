@@ -114,6 +114,12 @@ void GeneralParser<T_Point>::LoadCorrectionFile(std::string correction_path) {
 template <typename T_Point>
 int GeneralParser<T_Point>::LoadCorrectionString(char *correction_content) {
   std::string correction_content_str = correction_content;
+  std::ofstream temp_stream;
+  temp_stream.open("/home/strad/Desktop/lidar_correction.csv", std::ios::app);
+  if (temp_stream.is_open()) {
+    temp_stream.write(correction_content_str.c_str(), correction_content_str.length());
+    temp_stream.close();
+  }
   std::istringstream ifs(correction_content_str);
   std::string line;
 

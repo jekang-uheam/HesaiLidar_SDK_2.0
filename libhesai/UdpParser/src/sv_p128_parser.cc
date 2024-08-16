@@ -148,13 +148,19 @@ int SV_P128_Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, Lida
       float z = distance * this->sin_all_angle_[(elevation)];
       this->TransformPoint(x, y, z);
 
+      double timestamp = double(packet.sensor_timestamp) / kMicrosecondToSecond;
+
       setX(frame.points[point_index], x);
       setY(frame.points[point_index], y);
       setZ(frame.points[point_index], z);
       setIntensity(frame.points[point_index], packet.reflectivities[block_id * packet.laser_num + i]);
-      setTimestamp(frame.points[point_index], double(packet.sensor_timestamp) / kMicrosecondToSecond);
+      setTimestamp(frame.points[point_index], timestamp);
       setRing(frame.points[point_index], i);
       setAngle(frame.points[point_index], static_cast<int>(packet.azimuth[block_id * packet.laser_num]));
+
+      if (frame.first_timestamp_ == 0.0 || (timestamp > 0 && timestamp < frame.first_timestamp_)) {
+        frame.first_timestamp_ = timestamp;
+      }
     }
   }
   frame.points_num += packet.points_num;

@@ -22,7 +22,7 @@ namespace lidar {
 class SVLidarSdk {
  public:
   SVLidarSdk()
-      : runing_thread_ptr_(nullptr), lidar_ptr_(nullptr), is_thread_runing_(false), packet_loss_tool_(false) {
+      : runing_thread_ptr_(nullptr), lidar_ptr_(nullptr), is_thread_runing_(false), packet_loss_tool_(false), first_timestamp_(0) {
     std::cout << "-------- SV Lidar SDK ver" << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_TINY << " --------" << std::endl;
   }
 
@@ -114,6 +114,7 @@ class SVLidarSdk {
 
       // get distance azimuth reflection, etc.and put them into decode_packet
       lidar_ptr_->DecodePacket(decoded_packet, packet);
+      packet.set_timestamp(decoded_packet.sensor_timestamp);
 
       // do not compute xyzi of points if enable packet_loss_tool_
       if (true == packet_loss_tool_) {
@@ -135,7 +136,8 @@ class SVLidarSdk {
           }
           // publish upd packet topic
           if (pkt_cb_) {
-            pkt_cb_(udp_packet_frame, lidar_ptr_->frame_.points[0].timestamp);
+            // pkt_cb_(udp_packet_frame, lidar_ptr_->frame_.points[0].timestamp);
+            pkt_cb_(udp_packet_frame, lidar_ptr_->frame_.first_timestamp_);
           }
         }
 
@@ -188,7 +190,8 @@ class SVLidarSdk {
 
   // parsar fault message
   void FaultMessageCallback(UdpPacket& udp_packet, FaultMessageInfo& fault_message_info) {
-    FaultMessageVersion3* fault_message_ptr = reinterpret_cast<FaultMessageVersion3*>(&(udp_packet.buffer[0]));
+    FaultMessageVersion3* fault_message_ptr =
+        reinterpret_cast<FaultMessageVersion3*>(&(udp_packet.buffer[0]));
     if (nullptr != fault_message_ptr) {
       fault_message_ptr->ParserFaultMessage(fault_message_info);
     }
@@ -201,6 +204,7 @@ class SVLidarSdk {
   Lidar<SVPoint_t>* lidar_ptr_;
   bool is_thread_runing_;
   bool packet_loss_tool_;
+  double first_timestamp_;
 
   std::function<void(const UdpFrame_t&, double)> pkt_cb_;
   std::function<void(const LidarDecodedFrame<SVPoint_t>&)> point_cloud_cb_;

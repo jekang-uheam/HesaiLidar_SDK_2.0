@@ -113,6 +113,7 @@ class HesaiLidarSdk {
 
       // get distance azimuth reflection, etc.and put them into decode_packet
       lidar_ptr_->DecodePacket(decoded_packet, packet);
+      packet.set_timestamp(decoded_packet.sensor_timestamp);
 
       // do not compute xyzi of points if enable packet_loss_tool_
       if (packet_loss_tool_ == true) continue;
