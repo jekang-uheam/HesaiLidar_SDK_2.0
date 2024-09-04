@@ -33,6 +33,19 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace hesai {
 namespace lidar {
+
+#ifndef VERSION_MAJOR
+#define VERSION_MAJOR 2
+#endif  // VERSION_MAJOR
+
+#ifndef VERSION_MINOR
+#define VERSION_MINOR 0
+#endif  // VERSION_MINOR
+
+#ifndef VERSION_TINY
+#define VERSION_TINY 5
+#endif  // VERSION_TINY
+
 template <typename T_Point>
 class HesaiLidarSdk {
  private:
