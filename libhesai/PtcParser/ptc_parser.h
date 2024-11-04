@@ -44,10 +44,11 @@ namespace lidar
 // PtcParser mainly parsers ptc packets and get values the request want.
 class PtcParser {
 public:
-  PtcParser(uint8_t ptc_version);
+  explicit PtcParser(uint8_t ptc_version);
   PtcParser(){};
   virtual ~PtcParser();
-
+  PtcParser(const PtcParser&) = delete;
+  PtcParser& operator=(const PtcParser&) = delete;
   // 字节流的打包。
   // 因为要将header和payload进行组装
   bool PtcStreamEncode(const u8Array_t &payload, u8Array_t &byteStreamOut, uint8_t u8Cmd);

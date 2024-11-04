@@ -193,7 +193,6 @@ class PcapSource : public Source {
   void setPacketInterval(int microsecond);
   virtual void SetSocketBufferSize(uint32_t u32BufSize) {};
 };
-
 }  // namespace lidar
 }  // namespace hesai
 #endif  // PCPASTREAMER_H_

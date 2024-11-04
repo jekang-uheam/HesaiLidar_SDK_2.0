@@ -29,6 +29,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "udp_p40_parser_gpu.h"
 #include "udp_p64_parser_gpu.h"
 #include "udp4_3_parser_gpu.h"
+#include "udp4_7_parser_gpu.h"
 #include "udp1_4_parser_gpu.h"
 #include "udp3_1_parser_gpu.h"
 #include "udp3_2_parser_gpu.h"
@@ -43,7 +44,7 @@ int UdpParserGpu<T_Point>::LoadCorrectionString(char *correction_content) {
     return m_generalParserGpu->LoadCorrectionString(correction_content);
   }
   else {
-    printf("m_generalParserGpu is nullptr\n");
+    LogWarning("m_generalParserGpu is nullptr");
     return -1;
   }
   return 0;
@@ -54,7 +55,7 @@ int UdpParserGpu<T_Point>::LoadCorrectionFile(std::string correction_path) {
     return m_generalParserGpu->LoadCorrectionFile(correction_path);
   }
   else {
-    printf("m_generalParserGpu is nullptr\n");
+    LogWarning("m_generalParserGpu is nullptr");
     return -1;
   }
   return 0;
@@ -67,7 +68,7 @@ int UdpParserGpu<T_Point>::LoadFiretimesString(char *correction_string) {
     m_generalParserGpu->LoadFiretimesString(correction_string);
   }
   else {
-    printf("m_generalParserGpu is nullptr\n");
+    LogWarning("m_generalParserGpu is nullptr");
     return -1;
   }
   return 0;
@@ -78,7 +79,7 @@ void UdpParserGpu<T_Point>::LoadFiretimesFile(std::string firetimes_path) {
     m_generalParserGpu->LoadFiretimesFile(firetimes_path);
   }
   else {
-    printf("m_generalParserGpu is nullptr\n");
+    LogWarning("m_generalParserGpu is nullptr");
   }
 }
 template <typename T_Point>
@@ -133,6 +134,7 @@ void UdpParserGpu<T_Point>::CreatGeneralParser(uint8_t major, uint8_t minor) {
       switch (minor) {
         case 1:
           m_generalParserGpu = new Udp3_1ParserGpu<T_Point>();
+          break;
         case 2:
           m_generalParserGpu = new Udp3_2ParserGpu<T_Point>();
           break;
@@ -191,6 +193,9 @@ void UdpParserGpu<T_Point>::SetLidarType(std::string lidar_type) {
   if (lidar_type == "AT128" || lidar_type == "AT128E2X" || lidar_type == "AT128E3X") {
     m_generalParserGpu = new Udp4_3ParserGpu<T_Point>();
   }
+  if (lidar_type == "ATX") {
+    m_generalParserGpu = new Udp4_7ParserGpu<T_Point>();
+  }   
   if (lidar_type == "Pandar128E3X" || lidar_type == "Pandar128") {
     m_generalParserGpu = new Udp1_4ParserGpu<T_Point>();
   }
@@ -239,3 +244,19 @@ int UdpParserGpu<T_Point>::SetTransformPara(float x, float y, float z, float rol
   return -1;
 }
 
+template<typename T_Point>
+int UdpParserGpu<T_Point>::SetOpticalCenterCoordinates(std::string lidar_type) {
+  if (m_generalParserGpu != nullptr) {
+    m_generalParserGpu->SetOpticalCenterCoordinates(lidar_type);
+    return 0;
+  }
+  return -1;
+}
+
+template<typename T_Point>
+int UdpParserGpu<T_Point>::SetXtSpotCorrecion(std::string lidar_type) {
+  if (m_generalParserGpu != nullptr) {
+    return m_generalParserGpu->SetXtSpotCorrecion(lidar_type);
+  }
+  return -1;
+}

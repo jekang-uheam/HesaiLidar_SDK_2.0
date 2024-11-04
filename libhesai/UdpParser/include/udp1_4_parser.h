@@ -55,26 +55,24 @@ class Udp1_4Parser : public GeneralParser<T_Point> {
   Udp1_4Parser();
   virtual ~Udp1_4Parser();
 
-  // covert a origin udp packet to decoded packet, the decode function is in UdpParser module
-  // udp_packet is the origin udp packet, output is the decoded packet
-  virtual int DecodePacket(LidarDecodedPacket<T_Point>& output, const UdpPacket& udpPacket);
+  // covert a origin udp packet to decoded data, and pass the decoded data to a frame struct to reduce memory copy
+  virtual int DecodePacket(LidarDecodedFrame<T_Point> &frame, const UdpPacket &udpPacket);
 
   // compute xyzi of points from decoded packet
   // param packet is the decoded packet; xyzi of points after computed is puted in frame
-  virtual int ComputeXYZI(LidarDecodedFrame<T_Point>& frame, LidarDecodedPacket<T_Point>& packet);
+  virtual int ComputeXYZI(LidarDecodedFrame<T_Point> &frame, int packet_index);
 
   // get lidar firetime correction file from local file,and pass to udp parser
   virtual void LoadFiretimesFile(std::string firetimes_path);
 
+  using GeneralParser<T_Point>::GetFiretimesCorrection;
   // compute lidar firetime correciton
-  double GetFiretimesCorrection(int laserId, double speed, uint8_t optMode, uint8_t angleState, uint16_t dist);
+  double GetFiretimesCorrection(int laserId, double speed, uint8_t optMode, uint8_t angleState, float dist);
 
   // determine whether frame splitting is needed
   bool IsNeedFrameSplit(uint16_t azimuth);
 
-  // compute lidar distance correction
-  void GetDistanceCorrection(int laser_id, float distance, int& azimuth, int& elevation);
-  //   virtual int ComputeXYZI(LidarDecodedFrame &frame, LidarDecodedPacket &packet);
+  using GeneralParser<T_Point>::GetDistanceCorrection;
 
  private:
   static const int kLaserNum = 128;
@@ -90,6 +88,6 @@ class Udp1_4Parser : public GeneralParser<T_Point> {
 }  // namespace lidar
 }  // namespace hesai
 
-#include "../src/udp1_4_parser.cc"
+#include "udp1_4_parser.cc"
 
 #endif  // UDP1_4_PARSER_H_

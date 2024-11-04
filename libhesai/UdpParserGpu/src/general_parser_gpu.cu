@@ -37,83 +37,6 @@ GeneralParserGpu<T_Point>::~GeneralParserGpu() {
     corrections_loaded_ = false;
   }
 }
-template <typename T_Point>
-int GeneralParserGpu<T_Point>::LoadCorrectionFile(std::string correction_path) {
-  int ret = 0;
-  std::ifstream fin(correction_path);
-  if (fin.is_open()) {
-    int length = 0;
-    fin.seekg(0, std::ios::end);
-    length = fin.tellg();
-    fin.seekg(0, std::ios::beg);
-    char *buffer = new char[length];
-    fin.read(buffer, length);
-    fin.close();
-    ret = LoadCorrectionString(buffer);
-    if (ret != 0) {
-      std::cout << "Parse local correction file Error" << std::endl;
-      return -1;
-    }
-  } else {
-    std::cout << "Open correction file failed" << std::endl;
-    return -1;
-  }
-  return 0;
-}
-template <typename T_Point>
-int GeneralParserGpu<T_Point>::LoadCorrectionString(char *correction_content) {
-  std::string correction_content_str = correction_content;
-  std::istringstream ifs(correction_content_str);
-  std::string line;
-
-  std::getline(ifs, line);  // skip first line "Laser id,Elevation,Azimuth" or "eeff"
-
-  float elevation_list[MAX_LASER_NUM], azimuth_list[MAX_LASER_NUM];
-
-  std::vector<std::string> vfirstLine;
-  boost::split(vfirstLine, line, boost::is_any_of(","));
-  if (vfirstLine[0] == "EEFF" || vfirstLine[0] == "eeff") {
-    std::getline(ifs, line);  // skip second line
-  }
-
-  int lineCount = 0;
-  while (std::getline(ifs, line)) {
-    std::vector<std::string> vLineSplit;
-    boost::split(vLineSplit, line, boost::is_any_of(","));
-    if (vLineSplit.size() < 3) {  // skip error line or hash value line
-      continue;
-    } else {
-      lineCount++;
-    }
-    float elevation, azimuth;
-    int laserId = 0;
-
-    std::stringstream ss(line);
-    std::string subline;
-    std::getline(ss, subline, ',');
-    std::stringstream(subline) >> laserId;
-    std::getline(ss, subline, ',');
-    std::stringstream(subline) >> elevation;
-    std::getline(ss, subline, ',');
-    std::stringstream(subline) >> azimuth;
-
-    if (laserId != lineCount || laserId >= MAX_LASER_NUM) {
-      std::cout << "laser id is wrong in correction file. laser Id:"
-                  << laserId << ", line" << lineCount << std::endl;
-      return -1;
-    }
-    elevation_list[laserId - 1] = elevation;
-    azimuth_list[laserId - 1] = azimuth;
-  }
-  // this->elevation_correction_.resize(lineCount);
-  // this->azimuth_collection_.resize(lineCount);
-
-  // for (int i = 0; i < lineCount; ++i) {
-  //   this->elevation_correction_[i] = elevation_list[i];
-  //   this->azimuth_collection_[i] = azimuth_list[i];
-  // }
-  return 0;
-}
 
 template <typename T_Point>
 void GeneralParserGpu<T_Point>::LoadFiretimesFile(std::string firetimes_path) {
@@ -130,19 +53,14 @@ void GeneralParserGpu<T_Point>::LoadFiretimesFile(std::string firetimes_path) {
       this->firetime_correction_[std::stoi(index) - 1] = std::stod(deltTime);
     }
   } else {
-    std::cout << "Open correction file failed" << std::endl;
+    LogError("Open correction file failed");
   }
   return;
 }
 
 template <typename T_Point>
 int GeneralParserGpu<T_Point>::LoadFiretimesString(char *correction_string) {
-  printf("load firetimes string\n");
-  return 0;
-}
-
-template <typename T_Point>
-int GeneralParserGpu<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame) {
+  LogInfo("load firetimes string");
   return 0;
 }
 
@@ -156,3 +74,47 @@ void GeneralParserGpu<T_Point>::SetTransformPara(float x, float y, float z, floa
   transform_.pitch = pitch;
 }
 
+template <typename T_Point>
+void GeneralParserGpu<T_Point>::SetOpticalCenterCoordinates(std::string lidar_type) {
+  if (lidar_type == "Pandar128E4X" || lidar_type == "OT") {
+    optical_center.x = -10.0 / 1000.0;
+    optical_center.y = 45.0 / 1000.0;
+    optical_center.z = 0.0 / 1000.0;
+  } else if(lidar_type == "Pandar128E3X" || lidar_type == "Pandar64E3X" || lidar_type == "Pandar40E3X" || lidar_type == "Pandar90E3X") {
+    optical_center.x = -12.0 / 1000.0;
+    optical_center.y = 43.56 / 1000.0;
+    optical_center.z = 0.0 / 1000.0;
+  } else if(lidar_type == "Pandar64E2X" || lidar_type == "Pandar40E2X") {
+    optical_center.x = -12.0 / 1000.0;
+    optical_center.y = 38.73 / 1000.0;
+    optical_center.z = 0.0 / 1000.0;
+  } else if(lidar_type == "PandarQT") {
+    optical_center.x = -7.2 / 1000.0;
+    optical_center.y = 29.8 / 1000.0;
+    optical_center.z = 0.0 / 1000.0;
+  } else if(lidar_type == "QT128C2X") {
+    optical_center.x = 7.2 / 1000.0;
+    optical_center.y = 35.4 / 1000.0;
+    optical_center.z = 0.0 / 1000.0;
+  } else if(lidar_type == "PandarXT32M1" || lidar_type == "PandarXT16M1") {
+    optical_center.x = -13.0 / 1000.0;
+    optical_center.y = 31.5 / 1000.0;
+    optical_center.z = 0.0 / 1000.0;
+  } else if(lidar_type == "PandarXT32M2X" || lidar_type == "XTM") {
+    optical_center.x = -13.0 / 1000.0;
+    optical_center.y = 30.5 / 1000.0;
+    optical_center.z = 0.0 / 1000.0;
+  } else {
+    LogWarning("Parameter(distance_correction_lidar_type) is set to null or error to not enable distance correction");
+  }
+}
+
+template <typename T_Point>
+int GeneralParserGpu<T_Point>::SetXtSpotCorrecion(std::string lidar_type) {
+  if (lidar_type == "PandarXT32M1" || lidar_type == "PandarXT16M1" ) {
+    xt_spot_correction = true;
+  } else {
+    return -1;
+  }
+  return 0;
+}

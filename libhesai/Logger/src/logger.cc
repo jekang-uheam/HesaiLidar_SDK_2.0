@@ -51,21 +51,25 @@ bool Logger::Start() {
     return false;
 
   spthread_.reset(new std::thread(std::bind(&Logger::threadfunc, this)));
-  printf("logger start to run\n");
+  LogInfo("logger start to run");
   running_ = true;
 
   return true;
 }
 
 void Logger::Stop() {
+  if (running_ != true) return;
   exit_ = true;
   cv_.notify_one();
 
   // 等待时间线程结束
-  spthread_->join();
+  if (spthread_ != nullptr && spthread_->joinable()) {
+    spthread_->join();
+  }
+  running_ = false;
 }
 
-void Logger::AddToQueue(LOGLEVEL loglevel, const char* pszFile, int lineNo, const char* pszFuncSig, char* pszFmt, ...) {
+void Logger::AddToQueue(LOGLEVEL loglevel, const char* pszFile, int lineNo, const char* pszFuncSig, const char* pszFmt, ...) {
   if ((loglevel & log_level_rule_) != loglevel) return;
   char msg[256] = {0};
 
@@ -81,7 +85,7 @@ void Logger::AddToQueue(LOGLEVEL loglevel, const char* pszFile, int lineNo, cons
   time_t now = time(NULL);
   struct tm* tmstr = localtime(&now);
   char content[512] = {0};
-  std::string logLevel;
+  const char* logLevel;
   if (loglevel == LOG_DEBUG) {
     logLevel = "DEBUG";
   } else if (loglevel == LOG_INFO) {
@@ -92,16 +96,18 @@ void Logger::AddToQueue(LOGLEVEL loglevel, const char* pszFile, int lineNo, cons
     logLevel = "ERROR";
   } else if (loglevel == LOG_FATAL) {
     logLevel = "FATAL";
+  } else {
+    logLevel = "";
   }
-  sprintf(content, "[%04d-%02d-%02d %02d:%02d:%02d][%s][0x%04x][%s:%d %s]%s",
+  sprintf(content, "[%04d-%02d-%02d %02d:%02d:%02d][%s][0x%04x][%s:%d %s]%s\n",
           tmstr->tm_year + 1900,
           tmstr->tm_mon + 1,
           tmstr->tm_mday,
           tmstr->tm_hour,
           tmstr->tm_min,
           tmstr->tm_sec,
-          logLevel.c_str(),
-          std::this_thread::get_id(),
+          logLevel,
+          (unsigned int)std::hash<std::thread::id>{}(std::this_thread::get_id()),
           pszFile,
           lineNo,
           pszFuncSig,
@@ -116,7 +122,15 @@ void Logger::AddToQueue(LOGLEVEL loglevel, const char* pszFile, int lineNo, cons
     cv_.notify_one();
   }
   if (log_target_rule_ & LOG_TARGET_CONSOLE) {
-    printf("%s\n", content);
+    printf("[%04d-%02d-%02d %02d:%02d:%02d][%s]%s\n",
+           tmstr->tm_year + 1900,
+           tmstr->tm_mon + 1,
+           tmstr->tm_mday,
+           tmstr->tm_hour,
+           tmstr->tm_min,
+           tmstr->tm_sec,
+           logLevel,
+           msg);
   }
 }
 

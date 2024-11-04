@@ -25,6 +25,7 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ************************************************************************************************/
+#pragma once
 #include "lidar.h"
 #include "udp_parser_gpu.h"
 #include "fault_message.h"
@@ -36,11 +37,18 @@ template <typename T_Point>
 class HesaiLidarSdkGpu
 {
 private:
-  boost::thread *runing_thread_ptr_;
+  std::thread *runing_thread_ptr_;
   std::function<void(const UdpFrame_t &, double)> pkt_cb_;
   std::function<void(const LidarDecodedFrame<T_Point> &)> point_cloud_cb_;
+  std::function<void(const u8Array_t&)> correction_cb_;
+  std::function<void(const uint32_t &, const uint32_t &)> pkt_loss_cb_;
+  std::function<void(const uint8_t&, const u8Array_t&)> ptp_cb_;
+  std::function<void(const FaultMessageInfo&)> fault_message_cb_;
   bool is_thread_runing_;
   bool packet_loss_tool_; 
+  uint32_t device_ip_address_;
+  uint16_t device_udp_port_;
+  uint16_t device_fault_port_;
 
 public:
   HesaiLidarSdkGpu()
@@ -93,11 +101,27 @@ public:
     //set packet_loss_tool
     packet_loss_tool_ = param.decoder_param.enable_packet_loss_tool;
 
+    device_ip_address_ = inet_addr(param.input_param.device_ip_address.c_str());
+    if(param.input_param.device_fault_port >= 1024 && param.input_param.device_fault_port <= 65535 && device_ip_address_ != INADDR_NONE){
+      device_fault_port_ = param.input_param.device_fault_port;
+    }
+    else{
+      device_fault_port_ = 0;
+    }
+    if(param.input_param.device_udp_src_port >= 1024 && param.input_param.device_udp_src_port <= 65535 && device_ip_address_ != INADDR_NONE){
+      device_udp_port_ = param.input_param.device_udp_src_port;
+    }
+    else{
+      device_udp_port_ = 0;
+    }
+
     //get lidar type from Lidar class
     std::string lidar_type_from_parser = lidar_ptr_->GetLidarType();
 
     //init gpu parser with lidar type
     gpu_parser_ptr_->SetLidarType(lidar_type_from_parser);
+    gpu_parser_ptr_->SetOpticalCenterCoordinates(param.decoder_param.distance_correction_lidar_type);
+    gpu_parser_ptr_->SetXtSpotCorrecion(param.lidar_type);
 
     //set transform param
     gpu_parser_ptr_->SetTransformPara(param.decoder_param.transform_param.x,
@@ -140,106 +164,131 @@ public:
   // start process thread
   void Start()
   {
-    runing_thread_ptr_ = new boost::thread(boost::bind(&HesaiLidarSdkGpu::Run, this));
+    runing_thread_ptr_ = new std::thread(std::bind(&HesaiLidarSdkGpu::Run, this));
   }
   // process thread
   void Run()
   {
     is_thread_runing_ = true;
     UdpFrame_t udp_packet_frame;
-    LidarDecodedPacket<T_Point> decoded_packet;
-    LidarDecodedFrame<T_Point> frame;
     FaultMessageInfo fault_message_info;
     int packet_index = 0;
     uint32_t start = GetMicroTickCount();
+    uint32_t total_packet_count;
+    uint32_t total_packet_loss_count;    
+    lidar_ptr_->frame_.use_timestamp_type = lidar_ptr_->use_timestamp_type_;
+    lidar_ptr_->frame_.config.fov_start = lidar_ptr_->fov_start_;
+    lidar_ptr_->frame_.config.fov_end = lidar_ptr_->fov_end_;
     while (is_thread_runing_)
     {
       UdpPacket packet;
-
       //get one packte from origin_packets_buffer_, which receive data from upd or pcap thread
       int ret = lidar_ptr_->GetOnePacket(packet);
       if (ret == -1) continue;
 
       //get fault message
       if (packet.packet_len == kFaultMessageLength) {
-        FaultMessageCallback(packet, fault_message_info);
+        if(device_fault_port_ != 0){
+          if(device_ip_address_ != packet.ip || device_fault_port_ != packet.port){
+            continue;
+          }
+        }
+        ret = lidar_ptr_->ParserFaultMessage(packet, fault_message_info);
+        if (ret == 0) {
+          if (fault_message_cb_)
+            fault_message_cb_(fault_message_info);
+        }
         continue;
       }
 
-      //get distance azimuth reflection, etc.and put them into decode_packet
-      int res = lidar_ptr_->DecodePacket(decoded_packet, packet);
+      if(device_udp_port_ != 0 && (packet.is_timeout == false || packet_index == 0)){
+        if(device_ip_address_ != packet.ip || device_udp_port_ != packet.port){
+          continue;
+        }
+      }
 
-      //do not compute xyzi of points if enable packet_loss_tool_
-      if(packet_loss_tool_ == true) continue;
+      //get distance azimuth reflection, etc.and put them into decode_packet
+      if(lidar_ptr_->DecodePacket(lidar_ptr_->frame_, packet) != 0) {
+        continue;
+      }
 
       //one frame is receive completely, split frame
-      if (decoded_packet.scan_complete)
-      {
+      if (lidar_ptr_->frame_.scan_complete) {
+        // If it's not a timeout split frame, it will be one more packet
+        bool last_packet_is_valid = (lidar_ptr_->frame_.packet_num != packet_index);
+        lidar_ptr_->frame_.packet_num = packet_index;
         //compute xyzi of points in one frame, using gpu device
-        int ret = gpu_parser_ptr_->ComputeXYZI(frame);  
-        frame.packet_num = packet_index;
+        int ret = gpu_parser_ptr_->ComputeXYZI(lidar_ptr_->frame_);  
 
         //log info, display frame message
-        if (frame.points_num > kMinPointsOfOneFrame) {
-          // LogInfo("frame:%d   points:%u  packet:%d  time:%lf\n", frame.frame_index, frame.points_num, packet_index, frame.points[0].timestamp);
+        if (ret == 0 && lidar_ptr_->frame_.points_num > kMinPointsOfOneFrame) {
+          // printf("frame:%d   points:%u  packet:%d  time:%lf\n", frame.frame_index, frame.points_num, packet_index, frame.points[0].timestamp);
           
           //publish point cloud topic
-          if(point_cloud_cb_) point_cloud_cb_(frame);
+          if(point_cloud_cb_) point_cloud_cb_(lidar_ptr_->frame_);
 
           //publish upd packet topic
-          if(pkt_cb_) pkt_cb_(udp_packet_frame, frame.points[0].timestamp);
-        }
+          if(pkt_cb_) {
+            double timestamp = 0;
+            getTimestamp(lidar_ptr_->frame_.points[0], timestamp);
+            pkt_cb_(udp_packet_frame, timestamp);
+          }
 
+          if (pkt_loss_cb_ )
+          {
+            total_packet_count = lidar_ptr_->udp_parser_->GetGeneralParser()->total_packet_count_;
+            total_packet_loss_count = lidar_ptr_->udp_parser_->GetGeneralParser()->seqnum_loss_message_.total_loss_count;
+            pkt_loss_cb_(total_packet_count, total_packet_loss_count);
+          }
+          if (ptp_cb_ && lidar_ptr_->frame_.frame_index % 100 == 1)
+          {
+            u8Array_t ptp_status;
+            u8Array_t ptp_lock_offset;
+            int ret_status = lidar_ptr_->ptc_client_->GetPTPDiagnostics(ptp_status, 1); // ptp_query_type = 1
+            int ret_offset = lidar_ptr_->ptc_client_->GetPTPLockOffset(ptp_lock_offset);
+            if (ret_status != 0 || ret_offset != 0)
+            {
+              printf("-->%d %d %lu %lu\n", ret_status, ret_offset, ptp_status.size(), ptp_lock_offset.size());
+            }
+            else
+            {
+              ptp_cb_(ptp_lock_offset.front(), ptp_status);
+            }
+          }
+          if (correction_cb_ && lidar_ptr_->frame_.frame_index % 1000 == 1)
+          {
+            correction_cb_(lidar_ptr_->correction_string_);
+          }
+        }
         //reset frame variable
-        frame.Update();
+        lidar_ptr_->frame_.Update();
 
         //clear udp packet vector
         udp_packet_frame.clear();
         packet_index = 0;
 
         //if the packet which contains split frame msgs is vaild, it will be the first packet of new frame
-        if(decoded_packet.IsDecodedPacketValid()) {
-          decoded_packet.packet_index = packet_index;
+        if(last_packet_is_valid) {
+          lidar_ptr_->DecodePacket(lidar_ptr_->frame_, packet);
           udp_packet_frame.emplace_back(packet);
-          //copy distances, reflection, azimuth, elevation from decoded packet to frame container
-          memcpy((frame.distances + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.distances), decoded_packet.block_num * decoded_packet.laser_num * sizeof(uint16_t));
-          memcpy((frame.reflectivities + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.reflectivities), decoded_packet.block_num * decoded_packet.laser_num * sizeof(uint8_t));
-          memcpy((frame.azimuth + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.azimuth), decoded_packet.block_num * decoded_packet.laser_num * sizeof(float));
-          memcpy((frame.elevation + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.elevation), decoded_packet.block_num * decoded_packet.laser_num * sizeof(float));
-          frame.distance_unit = decoded_packet.distance_unit;
-          frame.sensor_timestamp[packet_index] = decoded_packet.sensor_timestamp;
-          frame.points_num = frame.points_num + decoded_packet.block_num * decoded_packet.laser_num;
-          frame.lidar_state = decoded_packet.lidar_state;
-          frame.work_mode = decoded_packet.work_mode;
+          lidar_ptr_->frame_.points_num += lidar_ptr_->frame_.per_points_num;
           packet_index++;
         }
-        
       }
       else
       {
-        //new decoded packet of one frame, put it into frame container
-        decoded_packet.packet_index = packet_index;
-        udp_packet_frame.emplace_back(packet);
-        //copy distances, reflection, azimuth, elevation from decoded packet to frame container
-        memcpy((frame.distances + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.distances), decoded_packet.block_num * decoded_packet.laser_num * sizeof(uint16_t));
-        memcpy((frame.reflectivities + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.reflectivities), decoded_packet.block_num * decoded_packet.laser_num * sizeof(uint8_t));
-        memcpy((frame.azimuth + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.azimuth), decoded_packet.block_num * decoded_packet.laser_num * sizeof(float));
-        memcpy((frame.elevation + packet_index * decoded_packet.block_num * decoded_packet.laser_num), (decoded_packet.elevation), decoded_packet.block_num * decoded_packet.laser_num * sizeof(float));
-        frame.distance_unit = decoded_packet.distance_unit;
-        frame.sensor_timestamp[packet_index] = decoded_packet.sensor_timestamp;
-        frame.points_num = frame.points_num + decoded_packet.block_num * decoded_packet.laser_num;
-        if (decoded_packet.block_num != 0 && decoded_packet.laser_num != 0) {
-            frame.laser_num = decoded_packet.laser_num;
-            frame.block_num = decoded_packet.block_num;
+        if(lidar_ptr_->frame_.packet_num != packet_index) {
+          udp_packet_frame.emplace_back(packet);
+          lidar_ptr_->frame_.points_num += lidar_ptr_->frame_.per_points_num;
+          packet_index++;
         }
-        packet_index++;
 
         //update status manually if start a new frame failedly
         if (packet_index >= kMaxPacketNumPerFrame) {
           packet_index = 0;
           udp_packet_frame.clear();
           lidar_ptr_->frame_.Update();
-          printf("fail to start a new frame\n");
+          LogError("fail to start a new frame\n");
         }
       }
     }
@@ -257,11 +306,20 @@ public:
     pkt_cb_ = callback;
   }
 
-  void FaultMessageCallback(UdpPacket& udp_packet, FaultMessageInfo& fault_message_info) {
-     FaultMessageVersion3 *fault_message_ptr = 
-      reinterpret_cast< FaultMessageVersion3*> (&(udp_packet.buffer[0]));
-    fault_message_ptr->ParserFaultMessage(fault_message_info);
-    return;
+  // assign callback fuction
+  void RegRecvCallback(const std::function<void (const u8Array_t&)>& callback) {
+    correction_cb_ = callback;
+  }
+
+  void RegRecvCallback(const std::function<void (const uint32_t &, const uint32_t &)>& callback) {
+    pkt_loss_cb_ = callback;
+  }
+  void RegRecvCallback(const std::function<void (const uint8_t&, const u8Array_t&)>& callback) {
+    ptp_cb_ = callback;
+  }
+
+  void RegRecvCallback(const std::function<void (const FaultMessageInfo&)>& callback) {
+    fault_message_cb_ = callback;
   }
 };
 

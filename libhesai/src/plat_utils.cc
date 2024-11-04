@@ -26,6 +26,7 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF TH
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ************************************************************************************************/
 #include <plat_utils.h>
+#include "logger.h"
 static const int kTimeStrLen = 1000;
 #ifdef _MSC_VER
 #define EPOCHFILETIME (116444736000000000UL)
@@ -33,6 +34,7 @@ static const int kTimeStrLen = 1000;
 #else
 #include <sys/syscall.h>
 #include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 #define gettid() syscall(SYS_gettid)
 #endif
@@ -40,16 +42,16 @@ static const int kTimeStrLen = 1000;
 #ifdef _MSC_VER
 void SetThreadPriorityWin(int priority) {
   auto handle = GetCurrentThread();
-  printf("set thread %lu, priority %d\n",std::this_thread::get_id(),
+  LogInfo("set thread %lu, priority %d",std::this_thread::get_id(),
         priority);
   SetThreadPriority(handle, priority);
   int prior = GetThreadPriority(handle);
-  printf("get thead %lu, priority %d\n", std::this_thread::get_id(),
+  LogInfo("get thead %lu, priority %d", std::this_thread::get_id(),
         prior);
 }
 #else
 void SetThreadPriority(int policy, int priority) {
-  printf("set thread %lu, tid %ld, policy %d and priority %d\n", pthread_self(),
+  LogInfo("set thread %lu, tid %ld, policy %d and priority %d", pthread_self(),
          gettid(), policy, priority);
   sched_param param;
   param.sched_priority = priority;
@@ -57,7 +59,7 @@ void SetThreadPriority(int policy, int priority) {
 
   int ret_policy;
   pthread_getschedparam(pthread_self(), &ret_policy, &param);
-  printf("get thead %lu, tid %ld, policy %d and priority %d\n", pthread_self(),
+  LogInfo("get thead %lu, tid %ld, policy %d and priority %d", pthread_self(),
          gettid(), ret_policy, param.sched_priority);
 }
 #endif
@@ -121,6 +123,25 @@ uint64_t GetMicroTickCountU64() {
   return ret;
 }
 
+uint64_t GetMicroTimeU64() {
+  uint64_t ret = 0;
+#ifdef _MSC_VER
+  FILETIME time;
+  LARGE_INTEGER larger_int;
+  GetSystemTimeAsFileTime(&time);
+  larger_int.LowPart = time.dwLowDateTime;
+  larger_int.HighPart = time.dwHighDateTime;
+  ret = (larger_int.QuadPart - EPOCHFILETIME) / 10;
+#else
+  struct timeval time;
+  memset(&time, 0, sizeof(time));
+  if (gettimeofday(&time, NULL) == 0) {
+    ret = time.tv_usec + time.tv_sec * 1000000;
+  }
+#endif
+  return ret;
+}
+
 int GetAvailableCPUNum() {
 #ifdef _MSC_VER
   SYSTEM_INFO sysInfo;
@@ -139,16 +160,24 @@ int GetAnglesFromFile(
   FILE* pFile = fopen(sFile.c_str(), "r");
 
   if (NULL == pFile) {
-    printf("cannot open the angle file, please check: %s\n", sFile.c_str());
+    LogError("cannot open the angle file, please check: %s", sFile.c_str());
     return 1;
   }
 
   char sContent[255] = {0};
-  fgets(sContent, 255, pFile);  // skip first line
+  if (fgets(sContent, 255, pFile) == NULL) { // skip first line
+    LogError("Failed to read from file");
+    fclose(pFile);
+    return 1;
+  } 
 
   while (!feof(pFile)) {
     memset(sContent, 0, 255);
-    fgets(sContent, 255, pFile);
+    if (fgets(sContent, 255, pFile) == NULL) {
+      LogError("Failed to read from file");
+      fclose(pFile);
+      return 1;
+    }
 
     if (strlen(sContent) < strlen(" , , ")) {
       break;
@@ -174,9 +203,9 @@ int GetAnglesFromFile(
 int GetCurrentTimeStamp(std::string &sTime, int nFormat) {
   time_t currentTime = time(NULL);
   struct tm *pLocalTime = localtime(&currentTime);
-  char sFormattedTime[kTimeStrLen];
 
   if (ISO_8601_FORMAT == nFormat) {
+    char sFormattedTime[kTimeStrLen];
     strftime(sFormattedTime, kTimeStrLen, "%FT%T%z", pLocalTime);
 
     sTime = std::string(sFormattedTime);

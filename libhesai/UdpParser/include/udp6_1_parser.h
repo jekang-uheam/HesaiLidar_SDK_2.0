@@ -51,24 +51,23 @@ class Udp6_1Parser : public GeneralParser<T_Point> {
   Udp6_1Parser();
   virtual ~Udp6_1Parser();
 
-  // covert a origin udp packet to decoded packet, the decode function is in UdpParser module
-  // udp_packet is the origin udp packet, output is the decoded packet
-  virtual int DecodePacket(LidarDecodedPacket<T_Point> &output, const UdpPacket& udpPacket);   
+  // covert a origin udp packet to decoded data, and pass the decoded data to a frame struct to reduce memory copy
+  virtual int DecodePacket(LidarDecodedFrame<T_Point> &frame, const UdpPacket& udpPacket);
 
   // compute xyzi of points from decoded packet
   // param packet is the decoded packet; xyzi of points after computed is puted in frame     
-  virtual int ComputeXYZI(LidarDecodedFrame<T_Point> &frame, LidarDecodedPacket<T_Point> &packet); 
+  virtual int ComputeXYZI(LidarDecodedFrame<T_Point> &frame, int packet_index); 
 
   // determine whether frame splitting is needed
   bool IsNeedFrameSplit(uint16_t azimuth);
 
-  // compute lidar distance correction
-  void GetDistanceCorrection(int const& aziOrigin, int const& aziDelt, int const& elevation,
-                             float const& distance, float& x, float& y, float& z);
+  using GeneralParser<T_Point>::GetDistanceCorrection;
+  
  private:
   float distance_correction_b_;
   float distance_correction_h_;
   int block_num_;
+  uint32_t spot_correction_angle[8] = {3, 3, 25, 25, 20, 15, 8, 6};
 };
 }  // namespace lidar
 }  // namespace hesai

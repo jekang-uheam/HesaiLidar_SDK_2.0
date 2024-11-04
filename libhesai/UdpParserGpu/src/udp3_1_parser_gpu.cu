@@ -38,16 +38,13 @@ using namespace hesai::lidar;
 template <typename T_Point>
 Udp3_1ParserGpu<T_Point>::Udp3_1ParserGpu() {
   corrections_loaded_ = false;
-  cudaSafeMalloc(raw_azimuths_cu_, sizeof(PointCloudStruct<T_Point>::azimuths));
-  cudaSafeMalloc(raw_distances_cu_, sizeof(PointCloudStruct<T_Point>::distances));
-  cudaSafeMalloc(raw_reflectivities_cu_, sizeof(PointCloudStruct<T_Point>::reflectivities));
-  cudaSafeMalloc(raw_sensor_timestamp_cu_, sizeof(PointCloudStruct<T_Point>::sensor_timestamp));
+  cudaSafeMalloc(point_data_cu_, POINT_DATA_LEN);
+  cudaSafeMalloc(sensor_timestamp_cu_, SENSOR_TIMESTAMP_LEN);
 }
 template <typename T_Point>
 Udp3_1ParserGpu<T_Point>::~Udp3_1ParserGpu() {
-  cudaSafeFree(raw_azimuths_cu_);
-  cudaSafeFree(raw_distances_cu_);
-  cudaSafeFree(raw_reflectivities_cu_);
+  cudaSafeFree(point_data_cu_);
+  cudaSafeFree(sensor_timestamp_cu_);
   if (corrections_loaded_) {
     cudaSafeFree(channel_elevations_cu_);
     cudaSafeFree(channel_azimuths_cu_);
@@ -56,16 +53,33 @@ Udp3_1ParserGpu<T_Point>::~Udp3_1ParserGpu() {
 }
 template <typename T_Point>
 __global__ void compute_xyzs_3_1_impl(T_Point *xyzs, const float* channel_azimuths, const float* channel_elevations,
-    const float* raw_azimuths, const uint16_t *raw_distances, const uint8_t *raw_reflectivities, 
-    const uint64_t *raw_sensor_timestamp, const double raw_distance_unit, Transform transform, 
-    int blocknum, int lasernum) {
+    const PointDecodeData* point_data, const uint64_t* sensor_timestamp, const double raw_distance_unit, Transform transform, LidarOpticalCenter optical_center,
+    const int blocknum, const int lasernum, const uint16_t packet_index) {
   auto iscan = blockIdx.x;
   auto ichannel = threadIdx.x;
-  float azimuth = raw_azimuths[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))];
-  auto theta = (azimuth) / HALF_CIRCLE * M_PI;
-  auto phi = (channel_elevations[(ichannel % lasernum)] * kResolutionFloat) / HALF_CIRCLE * M_PI;
+  if (iscan >= packet_index || ichannel >= blocknum * lasernum) return;
+  int point_index = iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum));
+  float azimuth = point_data[point_index].azimuth / kHalfCircleFloat * M_PI;
+  float theta = (channel_azimuths[(ichannel % lasernum)] * kResolutionFloat) / kHalfCircleFloat * M_PI;
+  float phi = (channel_elevations[(ichannel % lasernum)] * kResolutionFloat) / kHalfCircleFloat * M_PI;
+  float rho = point_data[point_index].distances * raw_distance_unit;
 
-  auto rho = raw_distances[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))] * raw_distance_unit;
+  if(rho > 0.09 && optical_center.x != 0) {
+    float tx = std::cos(phi) * std::sin(theta);
+    float ty = std::cos(phi) * std::cos(theta);
+    float tz = std::sin(phi);
+    float B = 2 * tx * optical_center.x + 2 * ty * optical_center.y + 2 * tz * optical_center.z;
+    float C = optical_center.x * optical_center.x + optical_center.y * optical_center.y + optical_center.z * optical_center.z - rho * rho;
+    float d_opitcal = std::sqrt(B * B / 4 - C) - B / 2;
+    float x = d_opitcal * tx + optical_center.x;
+    float y = d_opitcal * ty + optical_center.y;
+    float z = d_opitcal * tz + optical_center.z;
+    theta = azimuth + std::atan(x / y);
+    phi = std::asin(z / rho);
+  } else {
+    theta += azimuth;
+  }
+
   float z = rho * sin(phi);
   auto r = rho * cosf(phi);
   float x = r * sin(theta);
@@ -83,45 +97,33 @@ __global__ void compute_xyzs_3_1_impl(T_Point *xyzs, const float* channel_azimut
   float y_ = cosb * sinc * x + (cosa * cosc + sina * sinb * sinc) * y +
               (cosa * sinb * sinc - sina * cosc) * z + transform.y;
   float z_ = -sinb * x + sina * cosb * y + cosa * cosb * z + transform.z;
-  gpu::setX(xyzs[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))], x_);
-  gpu::setY(xyzs[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))],  y_);
-  gpu::setZ(xyzs[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))], z_);
-  gpu::setIntensity(xyzs[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))], raw_reflectivities[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))]);
-  gpu::setTimestamp(xyzs[iscan * blocknum * lasernum + (ichannel % (lasernum * blocknum))], double(raw_sensor_timestamp[iscan]) / kMicrosecondToSecond);
+  gpu::setX(xyzs[point_index], x_);
+  gpu::setY(xyzs[point_index],  y_);
+  gpu::setZ(xyzs[point_index], z_);
+  gpu::setIntensity(xyzs[point_index], point_data[point_index].reflectivities);
+  gpu::setTimestamp(xyzs[point_index], double(sensor_timestamp[iscan]) / kMicrosecondToSecond);
+  gpu::setRing(xyzs[point_index], ichannel % lasernum);
 }
 template <typename T_Point>
 int Udp3_1ParserGpu<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame) {
   if (!corrections_loaded_) return int(ReturnCode::CorrectionsUnloaded);      
-
-  cudaSafeCall(cudaMemcpy(raw_azimuths_cu_, frame.azimuth,
-                          kMaxPacketNumPerFrame * kMaxPointsNumPerPacket * sizeof(float), cudaMemcpyHostToDevice),
-               ReturnCode::CudaMemcpyHostToDeviceError);
-  cudaSafeCall(cudaMemcpy(raw_distances_cu_, frame.distances,
-                          kMaxPacketNumPerFrame * kMaxPointsNumPerPacket * sizeof(uint16_t),
-                          cudaMemcpyHostToDevice),
-               ReturnCode::CudaMemcpyHostToDeviceError); 
-  cudaSafeCall(cudaMemcpy(raw_reflectivities_cu_, frame.reflectivities,
-                          kMaxPacketNumPerFrame * kMaxPointsNumPerPacket * sizeof(uint8_t),
-                          cudaMemcpyHostToDevice),
-               ReturnCode::CudaMemcpyHostToDeviceError);  
-  cudaSafeCall(cudaMemcpy(raw_sensor_timestamp_cu_, frame.sensor_timestamp,
-                          kMaxPacketNumPerFrame * sizeof(uint64_t),
-                          cudaMemcpyHostToDevice),
-               ReturnCode::CudaMemcpyHostToDeviceError);    
-compute_xyzs_3_1_impl<<<kMaxPacketNumPerFrame, kMaxPointsNumPerPacket>>>(this->frame_.gpu()->points, channel_azimuths_cu_, channel_elevations_cu_, 
- raw_azimuths_cu_, raw_distances_cu_, raw_reflectivities_cu_, raw_sensor_timestamp_cu_, frame.distance_unit, this->transform_, frame.block_num, frame.laser_num);
+  cudaSafeCall(cudaMemcpy(point_data_cu_, frame.pointData,
+                          frame.block_num * frame.laser_num * frame.packet_num * sizeof(PointDecodeData), 
+                          cudaMemcpyHostToDevice), ReturnCode::CudaMemcpyHostToDeviceError);
+  cudaSafeCall(cudaMemcpy(sensor_timestamp_cu_, frame.sensor_timestamp,
+                          frame.packet_num * sizeof(uint64_t), 
+                          cudaMemcpyHostToDevice), ReturnCode::CudaMemcpyHostToDeviceError); 
+compute_xyzs_3_1_impl<<<frame.packet_num, frame.block_num * frame.laser_num>>>(this->frame_.gpu()->points, channel_azimuths_cu_, channel_elevations_cu_, 
+ point_data_cu_, sensor_timestamp_cu_, frame.distance_unit, this->transform_, this->optical_center, frame.block_num, frame.laser_num, frame.packet_num);
   cudaSafeCall(cudaGetLastError(), ReturnCode::CudaXYZComputingError);
-  this->frame_.DeviceToHost();
-  std::memcpy(frame.points, this->frame_.cpu()->points, sizeof(T_Point) * kMaxPacketNumPerFrame * kMaxPointsNumPerPacket);
+  this->frame_.DeviceToHost(0, frame.block_num * frame.laser_num * frame.packet_num * sizeof(T_Point));
+  std::memcpy(frame.points, this->frame_.cpu()->points, frame.block_num * frame.laser_num * frame.packet_num * sizeof(T_Point));
   return 0;
 }
 template <typename T_Point>
 int Udp3_1ParserGpu<T_Point>::LoadCorrectionString(char *correction_content) {
   if (corrections_loaded_) {
     return 0;
-    if (channel_elevations_cu_) cudaFree(channel_elevations_cu_);
-    if (channel_azimuths_cu_) cudaFree(channel_azimuths_cu_);
-    corrections_loaded_ = false;
   }
   std::string correction_content_str = correction_content;
   std::istringstream ifs(correction_content_str);
@@ -132,7 +134,7 @@ int Udp3_1ParserGpu<T_Point>::LoadCorrectionString(char *correction_content) {
   float elevation_list[MAX_LASER_NUM], azimuth_list[MAX_LASER_NUM];
 
   std::vector<std::string> vfirstLine;
-  boost::split(vfirstLine, line, boost::is_any_of(","));
+  split_string(vfirstLine, line, ',');
   if (vfirstLine[0] == "EEFF" || vfirstLine[0] == "eeff") {
     // skip second line
     std::getline(ifs, line);  
@@ -141,7 +143,7 @@ int Udp3_1ParserGpu<T_Point>::LoadCorrectionString(char *correction_content) {
   int lineCount = 0;
   while (std::getline(ifs, line)) {
     std::vector<std::string> vLineSplit;
-    boost::split(vLineSplit, line, boost::is_any_of(","));
+    split_string(vLineSplit, line, ',');
     // skip error line or hash value line
     if (vLineSplit.size() < 3) {  
       continue;
@@ -160,10 +162,13 @@ int Udp3_1ParserGpu<T_Point>::LoadCorrectionString(char *correction_content) {
     std::getline(ss, subline, ',');
     std::stringstream(subline) >> azimuth;
 
-    if (laserId != lineCount || laserId >= MAX_LASER_NUM) {
-      std::cout << "laser id is wrong in correction file. laser Id:"
-                  << laserId << ", line" << lineCount << std::endl;
-      return -1;
+    if (laserId > MAX_LASER_NUM || laserId <= 0) {
+      LogFatal("laser id is wrong in correction file. laser Id: %d, line: %d", laserId, lineCount);
+      continue;
+    }
+    if (laserId != lineCount) {
+      LogWarning("laser id is wrong in correction file. laser Id: %d, line: %d.  continue", laserId, lineCount);
+      continue;
     }
     elevation_list[laserId - 1] = elevation;
     azimuth_list[laserId - 1] = azimuth;
@@ -177,28 +182,26 @@ int Udp3_1ParserGpu<T_Point>::LoadCorrectionString(char *correction_content) {
 }
 template <typename T_Point>
 int Udp3_1ParserGpu<T_Point>::LoadCorrectionFile(std::string lidar_correction_file) {
-  int ret = 0;
-  printf("load correction file from local correction.csv now!\n");
+  LogInfo("load correction file from local correction.csv now!");
   std::ifstream fin(lidar_correction_file);
   if (fin.is_open()) {
     int length = 0;
-    std::string str_lidar_calibration;
     fin.seekg(0, std::ios::end);
     length = fin.tellg();
     fin.seekg(0, std::ios::beg);
     char *buffer = new char[length];
     fin.read(buffer, length);
     fin.close();
-    str_lidar_calibration = buffer;
-    ret = LoadCorrectionString(buffer);
+    int ret = LoadCorrectionString(buffer);
+    delete[] buffer;
     if (ret != 0) {
-      printf("Parse local Correction file Error\n");
+      LogError("Parse local Correction file Error");
     } else {
-      printf("Parse local Correction file Success!!!\n");
+      LogInfo("Parse local Correction file Success!!!");
       return 0;
     }
   } else {
-    printf("Open correction file failed\n");
+    LogError("Open correction file failed");
     return -1;
   }
   return -1;
