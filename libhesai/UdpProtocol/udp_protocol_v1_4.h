@@ -3,36 +3,37 @@ Copyright (C) 2023 Hesai Technology Co., Ltd.
 Copyright (C) 2023 Original Authors
 All rights reserved.
 
-All code in this repository is released under the terms of the following Modified BSD License.
-Redistribution and use in source and binary forms, with or without modification, are permitted
+All code in this repository is released under the terms of the following Modified BSD License. 
+Redistribution and use in source and binary forms, with or without modification, are permitted 
 provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this list of conditions and
+* Redistributions of source code must retain the above copyright notice, this list of conditions and 
   the following disclaimer.
 
-* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and 
   the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-* Neither the name of the copyright holder nor the names of its contributors may be used to endorse or
+* Neither the name of the copyright holder nor the names of its contributors may be used to endorse or 
   promote products derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED 
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR 
+TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ************************************************************************************************/
 #ifndef HS_LIDAR_ME_V4_H
 #define HS_LIDAR_ME_V4_H
 
 #include <udp_protocol_header.h>
-
 #include <ctime>
-namespace hesai {
-namespace lidar {
+namespace hesai
+{
+namespace lidar
+{
 
 #ifdef _MSC_VER
 #define PACKED
@@ -74,6 +75,7 @@ struct HS_LIDAR_BODY_CHN_UNIT_ME_V4 {
   uint16_t GetDistance() const { return little_to_native(m_u16Distance); }
   uint8_t GetReflectivity() const { return m_u8Reflectivity; }
   uint8_t GetConfidenceLevel() const { return m_u8Confidence; }
+
 
   void Print() const {
     printf("HS_LIDAR_BODY_CHN_UNIT_ME_V4:\n");
@@ -155,11 +157,10 @@ struct HS_LIDAR_FUNC_SAFETY_ME_V4 {
 
   void Print() const {
     printf("HS_LIDAR_FUNC_SAFETY_ME_V4:\n");
-    printf(
-        "ver:%u, lidarState:%u, rollingCnt:%u, isCurrFault:%u, "
-        "faultNum:%u, faultID:%u, faultCode:0x%04x, crc:0x%08x\n",
-        GetVersion(), GetLidarState(), GetRollingCnt(), IsCurrentFault(),
-        GetFaultNum(), GetFaultID(), GetFaultCode(), GetCrc());
+    printf("ver:%u, lidarState:%u, rollingCnt:%u, isCurrFault:%u, "
+           "faultNum:%u, faultID:%u, faultCode:0x%04x, crc:0x%08x\n",
+           GetVersion(), GetLidarState(), GetRollingCnt(), IsCurrentFault(),
+           GetFaultNum(), GetFaultID(), GetFaultCode(), GetCrc());
   }
 } PACKED;
 
@@ -205,7 +206,7 @@ struct HS_LIDAR_TAIL_ME_V4 {
   uint32_t GetTimestamp() const { return little_to_native(m_u32Timestamp); }
   uint8_t getOperationMode() const { return m_u8RunningMode & 0x0f; }
   uint8_t getAngleState(int blockIndex) const {
-    return (m_u16AzimuthFlag >> (2 * (7 - blockIndex))) & 0x03;
+        return (m_u16AzimuthFlag >> (2 * (7 - blockIndex))) & 0x03;
   }
 
   bool IsFirstReturn() const { return m_u8ReturnMode == kFirstReturn; }
@@ -223,28 +224,29 @@ struct HS_LIDAR_TAIL_ME_V4 {
   }
   uint64_t GetMicroLidarTimeU64() const {
     if (m_u8UTC[0] != 0) {
-      struct tm t = {0};
-      t.tm_year = m_u8UTC[0];
-      if (t.tm_year < 70) {
-        return 0;
-      }
-      t.tm_mon = m_u8UTC[1] - 1;
-      t.tm_mday = m_u8UTC[2] + 1;
-      t.tm_hour = m_u8UTC[3];
-      t.tm_min = m_u8UTC[4];
-      t.tm_sec = m_u8UTC[5];
-      t.tm_isdst = 0;
+			struct tm t = {0};
+			t.tm_year = m_u8UTC[0];
+			if (t.tm_year < 70) {
+				return 0;
+			}
+			t.tm_mon = m_u8UTC[1] - 1;
+			t.tm_mday = m_u8UTC[2] + 1;
+			t.tm_hour = m_u8UTC[3];
+			t.tm_min = m_u8UTC[4];
+			t.tm_sec = m_u8UTC[5];
+			t.tm_isdst = 0;
 #ifdef _MSC_VER
-      TIME_ZONE_INFORMATION tzi;
-      GetTimeZoneInformation(&tzi);
-      long int timezone = tzi.Bias * 60;
+  TIME_ZONE_INFORMATION tzi;
+  GetTimeZoneInformation(&tzi);
+  long int timezone =  tzi.Bias * 60;
 #endif
-      return (mktime(&t) - timezone - 86400) * 1000000 + GetTimestamp();
-    } else {
+			return (mktime(&t) - timezone - 86400) * 1000000 + GetTimestamp() ;
+		}
+		else {
       uint32_t utc_time_big = *(uint32_t*)(&m_u8UTC[0] + 2);
       uint64_t unix_second = big_to_native(utc_time_big);
       return unix_second * 1000000 + GetTimestamp();
-    }
+		}
   }
 
   uint8_t GetFactoryInfo() const { return m_u8FactoryInfo; }
@@ -254,14 +256,13 @@ struct HS_LIDAR_TAIL_ME_V4 {
 
   void Print() const {
     printf("HS_LIDAR_TAIL_ME_V4:\n");
-    printf(
-        "sts0:%d, data0:%d, sts1:%d, data1:%d, sts2:%d, data2:%d, "
-        "shutDown:%d, motorSpeed:%u, timestamp:%u, return_mode:0x%02x, "
-        "factoryInfo:0x%02x, utc:%u %u %u %u %u %u\n",
-        GetStsID0(), GetData0(), GetStsID1(), GetData1(), GetStsID2(),
-        GetData2(), HasShutdown(), GetMotorSpeed(), GetTimestamp(),
-        GetReturnMode(), GetFactoryInfo(), GetUTCData(0), GetUTCData(1),
-        GetUTCData(2), GetUTCData(3), GetUTCData(4), GetUTCData(5));
+    printf("sts0:%d, data0:%d, sts1:%d, data1:%d, sts2:%d, data2:%d, "
+           "shutDown:%d, motorSpeed:%u, timestamp:%u, return_mode:0x%02x, "
+           "factoryInfo:0x%02x, utc:%u %u %u %u %u %u\n",
+           GetStsID0(), GetData0(), GetStsID1(), GetData1(), GetStsID2(),
+           GetData2(), HasShutdown(), GetMotorSpeed(), GetTimestamp(),
+           GetReturnMode(), GetFactoryInfo(), GetUTCData(0), GetUTCData(1),
+           GetUTCData(2), GetUTCData(3), GetUTCData(4), GetUTCData(5));
   }
 } PACKED;
 
@@ -271,7 +272,7 @@ struct HS_LIDAR_TAIL_SEQ_NUM_ME_V4 {
   uint32_t GetSeqNum() const { return little_to_native(m_u32SeqNum); }
   static uint32_t GetSeqNumSize() { return sizeof(m_u32SeqNum); }
 
-  void Print() const {
+  void Print() const { 
     printf("HS_LIDAR_TAIL_SEQ_NUM_ME_V4:\n");
     printf("seqNum: %u\n", GetSeqNum());
   }
@@ -296,7 +297,7 @@ struct HS_LIDAR_TAIL_IMU_ME_V4 {
     return little_to_native(m_u16IMUAccelUnit) / 1000.f;
   }
   double GetIMUAngVelUnit() const {
-    return little_to_native(m_u16IMUAngVelUnit) / 100.f;
+    return little_to_native(m_u16IMUAngVelUnit) / 1000.f;
   }
   uint32_t GetIMUTimestamp() const {
     return little_to_native(m_u32IMUTimeStamp);
@@ -322,12 +323,11 @@ struct HS_LIDAR_TAIL_IMU_ME_V4 {
 
   void Print() const {
     printf("HS_LIDAR_TAIL_IMU_ME_V4:\n");
-    printf(
-        "Temp:%u, AccelUnit:%f, AngVelUnit:%f, TimeStamp:%u, XAccel:%f, "
-        "YAccel:%f, ZAccel:%f, XAngVel:%f, YAngVel:%f, ZAngVel:%f\n",
-        GetIMUTemperature(), GetIMUAccelUnit(), GetIMUAngVelUnit(),
-        GetIMUTimestamp(), GetIMUXAccel(), GetIMUYAccel(), GetIMUZAccel(),
-        GetIMUXAngVel(), GetIMUYAngVel(), GetIMUZAngVel());
+    printf("Temp:%u, AccelUnit:%f, AngVelUnit:%f, TimeStamp:%u, XAccel:%f, "
+           "YAccel:%f, ZAccel:%f, XAngVel:%f, YAngVel:%f, ZAngVel:%f\n",
+           GetIMUTemperature(), GetIMUAccelUnit(), GetIMUAngVelUnit(),
+           GetIMUTimestamp(), GetIMUXAccel(), GetIMUYAccel(), GetIMUZAccel(),
+           GetIMUXAngVel(), GetIMUYAngVel(), GetIMUZAngVel());
   }
 } PACKED;
 
@@ -396,13 +396,12 @@ struct HS_LIDAR_HEADER_ME_V4 {
 
   void Print() const {
     printf("HS_LIDAR_HEADER_ME_V4:\n");
-    printf(
-        "laserNum:%02u, block_num:%02u, DistUnit:%g, EchoCnt:%02u, "
-        "EchoNum:%02u, HasSeqNum:%d, HasIMU:%d, "
-        "HasFuncSafety:%d, HasCyberSecurity:%d, HasConfidence:%d\n",
-        GetLaserNum(), GetBlockNum(), GetDistUnit(), GetEchoCount(),
-        GetEchoNum(), HasSeqNum(), HasIMU(), HasFuncSafety(),
-        HasCyberSecurity(), HasConfidenceLevel());
+    printf("laserNum:%02u, block_num:%02u, DistUnit:%g, EchoCnt:%02u, "
+           "EchoNum:%02u, HasSeqNum:%d, HasIMU:%d, "
+           "HasFuncSafety:%d, HasCyberSecurity:%d, HasConfidence:%d\n",
+           GetLaserNum(), GetBlockNum(), GetDistUnit(), GetEchoCount(),
+           GetEchoNum(), HasSeqNum(), HasIMU(), HasFuncSafety(),
+           HasCyberSecurity(), HasConfidenceLevel());
   }
 } PACKED;
 #ifdef _MSC_VER

@@ -197,7 +197,10 @@ int PcapSource::next(UdpPacket& udpPacket, uint16_t u16Len, int flags,
         return -1;
     }
     bool ret = _p->read(pcap_record_);
-    if (!ret) return -1;
+  if (!ret) {
+    is_pcap_end = true;
+    return -1;
+  }
     if (pcap_record_.incl_len <= 1500 && pcap_record_.incl_len > sizeof(Ethernet)) {
         ret = _p->read(payload_.data(), pcap_record_.incl_len);
         if (!ret) return -1;
@@ -298,13 +301,16 @@ int PcapSource::next(UdpPacket& udpPacket, uint16_t u16Len, int flags,
             }
             break;
         default:
-        LogWarning("can not parser Ethernet data, type = %x ", ((Ethernet*)payload_.data())->ether_type);
+        // LogWarning("can not parser Ethernet data, type = %x ", ((Ethernet*)payload_.data())->ether_type);
             break;
         }
     }
     else {
         ret = _p->move(pcap_record_.incl_len);
-        if (!ret) return -1;
+    if (!ret) {
+      is_pcap_end = true;
+      return -1;
+    }
         return 1;
     }
     return 1;

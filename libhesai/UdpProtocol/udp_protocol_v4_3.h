@@ -3,36 +3,37 @@ Copyright (C) 2023 Hesai Technology Co., Ltd.
 Copyright (C) 2023 Original Authors
 All rights reserved.
 
-All code in this repository is released under the terms of the following Modified BSD License.
-Redistribution and use in source and binary forms, with or without modification, are permitted
+All code in this repository is released under the terms of the following Modified BSD License. 
+Redistribution and use in source and binary forms, with or without modification, are permitted 
 provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this list of conditions and
+* Redistributions of source code must retain the above copyright notice, this list of conditions and 
   the following disclaimer.
 
-* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and 
   the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-* Neither the name of the copyright holder nor the names of its contributors may be used to endorse or
+* Neither the name of the copyright holder nor the names of its contributors may be used to endorse or 
   promote products derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED 
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR 
+TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ************************************************************************************************/
 #ifndef HS_LIDAR_ST_V3_H
 #define HS_LIDAR_ST_V3_H
 
 #include <udp_protocol_header.h>
-
 #include "plat_utils.h"
-namespace hesai {
-namespace lidar {
+namespace hesai
+{
+namespace lidar
+{
 #ifdef _MSC_VER
 #define PACKED
 #pragma pack(push, 1)
@@ -76,6 +77,7 @@ struct HS_LIDAR_BODY_CHN_NNIT_ST_V3 {
            GetReflectivity(), GetConfidenceLevel());
   }
 } PACKED;
+
 
 struct HS_LIDAR_BODY_CRC_ST_V3 {
   uint32_t m_u32Crc;
@@ -136,28 +138,30 @@ struct HS_LIDAR_TAIL_ST_V3 {
   }
   uint64_t GetMicroLidarTimeU64() const {
     if (m_u8UTC[0] != 0) {
-      struct tm t = {0};
-      t.tm_year = m_u8UTC[0];
-      if (t.tm_year >= 200) {
-        t.tm_year -= 100;
-      }
-      t.tm_mon = m_u8UTC[1] - 1;
-      t.tm_mday = m_u8UTC[2] + 1;
-      t.tm_hour = m_u8UTC[3];
-      t.tm_min = m_u8UTC[4];
-      t.tm_sec = m_u8UTC[5];
-      t.tm_isdst = 0;
+			struct tm t = {0};
+			t.tm_year = m_u8UTC[0];
+			if (t.tm_year >= 200) {
+				t.tm_year -= 100;
+			}
+			t.tm_mon = m_u8UTC[1] - 1;
+			t.tm_mday = m_u8UTC[2] + 1;
+			t.tm_hour = m_u8UTC[3];
+			t.tm_min = m_u8UTC[4];
+			t.tm_sec = m_u8UTC[5];
+			t.tm_isdst = 0;
 #ifdef _MSC_VER
-      TIME_ZONE_INFORMATION tzi;
-      GetTimeZoneInformation(&tzi);
-      long int timezone = tzi.Bias * 60;
+  TIME_ZONE_INFORMATION tzi;
+  GetTimeZoneInformation(&tzi);
+  long int timezone =  tzi.Bias * 60;
 #endif
-      return (mktime(&t) - timezone - 86400) * 1000000 + GetTimestamp();
-    } else {
-      uint32_t utc_time_big = *(uint32_t *)(&m_u8UTC[0] + 2);
+      return (mktime(&t) - timezone - 86400) * 1000000 + GetTimestamp() ;
+		}
+		else {
+      uint32_t utc_time_big = *(uint32_t*)(&m_u8UTC[0] + 2);
       uint64_t unix_second = big_to_native(utc_time_big);
       return unix_second * 1000000 + GetTimestamp();
-    }
+		}
+
   }
 
   // uint32_t GetSeqNum() const { return little_to_native(m_u32SeqNum); }
@@ -276,6 +280,7 @@ struct HS_LIDAR_HEADER_ST_V3 {
   }
 } PACKED;
 
+
 struct FaultMessageVersion4_3 {
  public:
   uint16_t sob;
@@ -301,32 +306,33 @@ struct FaultMessageVersion4_3 {
   uint32_t GetFaultCode() const { return big_to_native(fault_code); }
   uint64_t GetMicroLidarTimeU64() const {
     if (utc_time[0] != 0) {
-      struct tm t = {0};
-      t.tm_year = utc_time[0];
-      if (t.tm_year >= 200) {
-        t.tm_year -= 100;
-      }
-      t.tm_mon = utc_time[1] - 1;
-      t.tm_mday = utc_time[2] + 1;
-      t.tm_hour = utc_time[3];
-      t.tm_min = utc_time[4];
-      t.tm_sec = utc_time[5];
-      t.tm_isdst = 0;
+			struct tm t = {0};
+			t.tm_year = utc_time[0];
+			if (t.tm_year >= 200) {
+				t.tm_year -= 100;
+			}
+			t.tm_mon = utc_time[1] - 1;
+			t.tm_mday = utc_time[2] + 1;
+			t.tm_hour = utc_time[3];
+			t.tm_min = utc_time[4];
+			t.tm_sec = utc_time[5];
+			t.tm_isdst = 0;
 #ifdef _MSC_VER
-      TIME_ZONE_INFORMATION tzi;
-      GetTimeZoneInformation(&tzi);
-      long int timezone = tzi.Bias * 60;
+  TIME_ZONE_INFORMATION tzi;
+  GetTimeZoneInformation(&tzi);
+  long int timezone =  tzi.Bias * 60;
 #endif
-      return (mktime(&t) - timezone - 86400) * 1000000 + GetTimestamp();
-    } else {
-      uint32_t utc_time_big = *(uint32_t *)(&utc_time[0] + 2);
+      return (mktime(&t) - timezone - 86400) * 1000000 + GetTimestamp() ;
+		}
+		else {
+      uint32_t utc_time_big = *(uint32_t*)(&utc_time[0] + 2);
       uint64_t unix_second = big_to_native(utc_time_big);
       return unix_second * 1000000 + GetTimestamp();
-    }
+		}
   }
   void ParserLensDirtyState(
       LensDirtyState lens_dirty_state[LENS_AZIMUTH_AREA_NUM]
-                                     [LENS_ELEVATION_AREA_NUM]) {
+                                   [LENS_ELEVATION_AREA_NUM]) {
     for (int i = 0; i < LENS_AZIMUTH_AREA_NUM; i++) {
       uint16_t rawdata =
           (*((uint16_t *)(&time_division_multiplexing[3 + i * 2])));

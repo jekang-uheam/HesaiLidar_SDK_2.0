@@ -1,23 +1,23 @@
 
 #include "udp2_5_parser.h"
-
-#include "udp_parser.h"
-#include "udp_protocol_header.h"
 #include "udp_protocol_v2_5.h"
+#include "udp_protocol_header.h"
+#include "udp_parser.h"
 
 using namespace hesai::lidar;
 
-template <typename T_Point>
+template<typename T_Point>
 Udp2_5Parser<T_Point>::Udp2_5Parser() {
   this->get_correction_file_ = false;
 }
 
-template <typename T_Point>
+template<typename T_Point>
 Udp2_5Parser<T_Point>::~Udp2_5Parser() { LogInfo("release Udp2_5Parser"); }
+
 
 // The main purpose of this function is to open, read, and parse a lidar calibration file, and print appropriate messages based on the parsing results.
 // This function can read both .bin and .csv files.
-template <typename T_Point>
+template<typename T_Point>
 void Udp2_5Parser<T_Point>::LoadCorrectionFile(std::string correction_path) {
   LogInfo("load correction file from local correction file now!");
   std::ifstream fin(correction_path);
@@ -43,7 +43,7 @@ void Udp2_5Parser<T_Point>::LoadCorrectionFile(std::string correction_path) {
   }
 }
 
-template <typename T_Point>
+template<typename T_Point>
 int Udp2_5Parser<T_Point>::LoadCorrectionString(char *data) {
   if (LoadCorrectionDatData(data) == 0) {
     return 0;
@@ -52,20 +52,21 @@ int Udp2_5Parser<T_Point>::LoadCorrectionString(char *data) {
 }
 
 // csv ----> correction
-template <typename T_Point>
-int Udp2_5Parser<T_Point>::LoadCorrectionCsvData(char *correction_string) {
+template<typename T_Point>
+int  Udp2_5Parser<T_Point>::LoadCorrectionCsvData(char *correction_string)
+{
   std::string correction_content_str = correction_string;
   std::istringstream ifs(correction_content_str);
   std::string line;
 
   // skip first line "Laser id,Elevation,Azimuth" or "eeff"
-  std::getline(ifs, line);
+  std::getline(ifs, line);  
   float elevation_list[MAX_LASER_NUM], azimuth_list[MAX_LASER_NUM];
   std::vector<std::string> vfirstLine;
   split_string(vfirstLine, line, ',');
   if (vfirstLine[0] == "EEFF" || vfirstLine[0] == "eeff") {
     // skip second line
-    std::getline(ifs, line);
+    std::getline(ifs, line);  
   }
 
   int lineCount = 0;
@@ -73,7 +74,7 @@ int Udp2_5Parser<T_Point>::LoadCorrectionCsvData(char *correction_string) {
     std::vector<std::string> vLineSplit;
     split_string(vLineSplit, line, ',');
     // skip error line or hash value line
-    if (vLineSplit.size() < 3) {
+    if (vLineSplit.size() < 3) {  
       continue;
     } else {
       lineCount++;
@@ -111,12 +112,13 @@ int Udp2_5Parser<T_Point>::LoadCorrectionCsvData(char *correction_string) {
   return 0;
 }
 
+
 // buffer(.bin) ---> correction
-template <typename T_Point>
+template<typename T_Point>
 int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
   try {
     char *p = data;
-    struct ETCorrectionsHeader ETheader = *((struct ETCorrectionsHeader *)p);
+    struct ETCorrectionsHeader ETheader = *((struct ETCorrectionsHeader* )p);
     if (0xee == ETheader.delimiter[0] && 0xff == ETheader.delimiter[1]) {
       switch (ETheader.min_version) {
         case 1: {
@@ -144,10 +146,10 @@ int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
           for (int i = 0; i < channel_num; i++) {
             corrections_.azimuths[i + 3] = ((float)(corrections_.raw_azimuths[i])) / division;
             corrections_.elevations[i + 3] = ((float)(corrections_.raw_elevations[i])) / division;
-            LogDebug("%d %f %f", i, corrections_.azimuths[i + 3], corrections_.elevations[i + 3]);
+            LogDebug("%d %f %f",i, corrections_.azimuths[i + 3], corrections_.elevations[i + 3]);
           }
-
-          memcpy((void *)&corrections_.SHA_value, p, 32);
+          
+          memcpy((void*)&corrections_.SHA_value, p, 32);
           // successed
           this->get_correction_file_ = true;
           return 0;
@@ -177,19 +179,19 @@ int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
           for (int i = 0; i < channel_num; i++) {
             corrections_.azimuths[i + 3] = ((float)(corrections_.raw_azimuths[i])) / division;
             corrections_.elevations[i + 3] = ((float)(corrections_.raw_elevations[i])) / division;
-            LogDebug("%d %f %f", i, corrections_.azimuths[i + 3], corrections_.elevations[i + 3]);
+            LogDebug("%d %f %f",i, corrections_.azimuths[i + 3], corrections_.elevations[i + 3]);
           }
-          corrections_.azimuth_adjust_interval = *((char *)p);
+          corrections_.azimuth_adjust_interval = *((char*)p);
           p = p + 1;
-          corrections_.elevation_adjust_interval = *((char *)p);
+          corrections_.elevation_adjust_interval = *((char*)p);
           p = p + 1;
           int angle_offset_len = (120 / (corrections_.azimuth_adjust_interval * 0.5) + 1) * (25 / (corrections_.elevation_adjust_interval * 0.5) + 1);
-          memcpy((void *)corrections_.azimuth_adjust, p, sizeof(int16_t) * angle_offset_len);
+          memcpy((void*)corrections_.azimuth_adjust, p, sizeof(int16_t) * angle_offset_len);
           p = p + sizeof(int16_t) * angle_offset_len;
-          memcpy((void *)corrections_.elevation_adjust, p, sizeof(int16_t) * angle_offset_len);
+          memcpy((void*)corrections_.elevation_adjust, p, sizeof(int16_t) * angle_offset_len); 
           p = p + sizeof(int16_t) * angle_offset_len;
           // int adjustNum = channel_num;
-          memcpy((void *)&corrections_.SHA_value, p, 32);
+          memcpy((void*)&corrections_.SHA_value, p, 32);
           // successed
           this->get_correction_file_ = true;
           return 0;
@@ -217,19 +219,19 @@ int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
           for (int i = 0; i < channel_num; i++) {
             corrections_.azimuths[i + 3] = ((float)(corrections_.raw_azimuths[i])) / division;
             corrections_.elevations[i + 3] = ((float)(corrections_.raw_elevations[i])) / division;
-            LogDebug("%d %f %f ", i, corrections_.azimuths[i + 3], corrections_.elevations[i + 3]);
+            LogDebug("%d %f %f ",i, corrections_.azimuths[i + 3], corrections_.elevations[i + 3]);
           }
-          corrections_.azimuth_adjust_interval = *((char *)p);
+          corrections_.azimuth_adjust_interval = *((char*)p);
           p = p + 1;
-          corrections_.elevation_adjust_interval = *((char *)p);
+          corrections_.elevation_adjust_interval = *((char*)p);
           p = p + 1;
           int angle_offset_len = (120 / (corrections_.azimuth_adjust_interval * 0.5) + 1) * (25 / (corrections_.elevation_adjust_interval * 0.5) + 1);
-          memcpy((void *)corrections_.azimuth_adjust, p, sizeof(int16_t) * angle_offset_len);
+          memcpy((void*)corrections_.azimuth_adjust, p, sizeof(int16_t) * angle_offset_len);
           p = p + sizeof(int16_t) * angle_offset_len;
-          memcpy((void *)corrections_.elevation_adjust, p, sizeof(int16_t) * angle_offset_len);
+          memcpy((void*)corrections_.elevation_adjust, p, sizeof(int16_t) * angle_offset_len); 
           p = p + sizeof(int16_t) * angle_offset_len;
           // int adjustNum = channel_num;
-          memcpy((void *)&corrections_.SHA_value, p, 32);
+          memcpy((void*)&corrections_.SHA_value, p, 32);
           // successed
           this->get_correction_file_ = true;
           return 0;
@@ -256,13 +258,13 @@ int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
                  sizeof(int16_t) * N);
           p += sizeof(int16_t) * N;
           memcpy((void *)&corrections_.raw_elevations, p,
-                 sizeof(int16_t) * N);
+               sizeof(int16_t) * N);
           p += sizeof(int16_t) * N;
           memcpy((void *)&corrections_.azimuth_offset_delta, p,
-                 sizeof(int16_t) * M);
+               sizeof(int16_t) * M);
           p += sizeof(int16_t) * M;
           memcpy((void *)&corrections_.elevation_offset_delta, p,
-                 sizeof(int16_t) * M);
+               sizeof(int16_t) * M);
           p += sizeof(int16_t) * M;
           corrections_.elevations[0] = ((float)(corrections_.header.apha)) / division;
           corrections_.elevations[1] = ((float)(corrections_.header.beta)) / division;
@@ -275,17 +277,17 @@ int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
             corrections_.azimuths[i + 3] = ((float)(corrections_.raw_azimuths[i])) / division;
             corrections_.elevations[i + 3] = ((float)(corrections_.raw_elevations[i])) / division;
           }
-          corrections_.azimuth_adjust_interval = *((char *)p);
+          corrections_.azimuth_adjust_interval = *((char*)p);
           p = p + 1;
-          corrections_.elevation_adjust_interval = *((char *)p);
+          corrections_.elevation_adjust_interval = *((char*)p);
           p = p + 1;
           int angle_offset_len = T * (120 / (corrections_.azimuth_adjust_interval * 0.1) + 1) * (3.2 / (corrections_.elevation_adjust_interval * 0.1) + 1);
-          memcpy((void *)corrections_.azimuth_adjust, p, sizeof(int16_t) * angle_offset_len);
+          memcpy((void*)corrections_.azimuth_adjust, p, sizeof(int16_t) * angle_offset_len);
           p = p + sizeof(int16_t) * angle_offset_len;
-          memcpy((void *)corrections_.elevation_adjust, p, sizeof(int16_t) * angle_offset_len);
+          memcpy((void*)corrections_.elevation_adjust, p, sizeof(int16_t) * angle_offset_len); 
           p = p + sizeof(int16_t) * angle_offset_len;
           // int adjustNum = channel_num;
-          memcpy((void *)&corrections_.SHA_value, p, 32);
+          memcpy((void*)&corrections_.SHA_value, p, 32);
           // successed
           this->get_correction_file_ = true;
           return 0;
@@ -295,7 +297,7 @@ int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
           break;
       }
     } else {
-      return -1;
+        return -1;
     }
   } catch (const std::exception &e) {
     LogFatal("load correction error: %s", e.what());
@@ -303,18 +305,18 @@ int Udp2_5Parser<T_Point>::LoadCorrectionDatData(char *data) {
   }
   return -1;
 }
-
+  
 //  Framing
-template <typename T_Point>
+template<typename T_Point>
 bool Udp2_5Parser<T_Point>::IsNeedFrameSplit(uint16_t frame_id) {
-  if (frame_id != this->last_frameid_ && this->last_frameid_ >= 0) {
-    return true;
+  if ( frame_id != this->last_frameid_  && this->last_frameid_ >= 0) {
+      return true;
   }
   return false;
 }
 
 // get elevations[i]
-template <typename T_Point>
+template<typename T_Point>
 int16_t Udp2_5Parser<T_Point>::GetVecticalAngle(int channel) {
   if (this->get_correction_file_ == false) {
     LogError("GetVecticalAngle: no correction file get, Error");
@@ -323,13 +325,14 @@ int16_t Udp2_5Parser<T_Point>::GetVecticalAngle(int channel) {
   return corrections_.elevations[channel];
 }
 
-template <typename T_Point>
+
+template<typename T_Point>
 int Udp2_5Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, int packet_index) {
-  // get configer information from corrections_, 1 block 1 corrections_
+  // get configer information from corrections_, 1 block 1 corrections_ 
   // float division = (float)corrections_.header.angle_division;
-  float apha = corrections_.elevations[0];
-  float beta = corrections_.elevations[1];
-  float gamma = corrections_.elevations[2];
+  float apha =  corrections_.elevations[0];
+  float beta =  corrections_.elevations[1];
+  float gamma =  corrections_.elevations[2];
   uint8_t mirror_index = (frame.pointData[packet_index * frame.per_points_num].mirror_index >> 4) & 0x0F;
   uint8_t turn_index = frame.pointData[packet_index * frame.per_points_num].mirror_index & 0x0F;
   if (corrections_.min_version == 4) {
@@ -342,7 +345,7 @@ int Udp2_5Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, int pa
     // float delte_apha = 0;
     // float delte_theta = 0;
     for (int i = 0; i < lasernum; i++) {
-      int point_index = packet_index * frame.per_points_num + blockId * frame.laser_num + i;
+      int point_index = packet_index * frame.per_points_num + blockId * frame.laser_num + i; 
       // get phi and psi and distance
       float raw_azimuth = frame.pointData[point_index].azimuth;
       float raw_elevation = frame.pointData[point_index].elevation;
@@ -351,12 +354,12 @@ int Udp2_5Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, int pa
       float theta = corrections_.elevations[i + 3];
       float an = apha + phi;
       float theta_n = (raw_elevation + theta / std::cos(an * M_PI / 180));
-      float elv_v = raw_elevation * M_PI / 180 + theta * M_PI / 180 - std::tan(raw_elevation * M_PI / 180) * (1 - std::cos(an * M_PI / 180));
-      float delt_azi_v = std::sin(an * M_PI / 180) * std::cos(an * M_PI / 180) * theta_n * theta_n / 2 * 1.016 * M_PI / 180 * M_PI / 180;
+      float elv_v = raw_elevation * M_PI / 180 + theta * M_PI / 180 - std::tan(raw_elevation * M_PI / 180) * (1 - std::cos(an * M_PI / 180)) ;
+      float delt_azi_v = std::sin(an * M_PI / 180) * std::cos(an * M_PI / 180) * theta_n * theta_n / 2  * 1.016 * M_PI / 180 * M_PI / 180;
       float eta = phi + delt_azi_v * 180 / M_PI + beta + raw_azimuth / 2;
-      float delt_azi_h = std::sin(eta * M_PI / 180) * std::tan(2 * gamma * M_PI / 180) * std::tan(elv_v) + std::sin(2 * eta * M_PI / 180) * gamma * gamma * M_PI / 180 * M_PI / 180;
-      float elv_h = elv_v * 180 / M_PI + std::cos(eta * M_PI / 180) * 2 * gamma;
-      float azi_h = 90 + raw_azimuth + delt_azi_h * 180 / M_PI + delt_azi_v * 180 / M_PI + phi;
+      float delt_azi_h = std::sin(eta * M_PI / 180) * std::tan(2 * gamma * M_PI / 180) * std::tan(elv_v ) + std::sin(2 * eta * M_PI / 180) * gamma * gamma * M_PI / 180 * M_PI / 180;
+      float elv_h = elv_v * 180 / M_PI + std::cos(eta * M_PI / 180) * 2 * gamma ;
+      float azi_h = 90 +  raw_azimuth + delt_azi_h * 180 / M_PI + delt_azi_v * 180 / M_PI + phi;
       if (corrections_.header.min_version == 2 || corrections_.header.min_version == 3) {
         azi_h = azi_h + corrections_.getAziAdjustV2(azi_h - 90, elv_h);
         elv_h = elv_h + corrections_.getEleAdjustV2(azi_h - 90, elv_h);
@@ -367,13 +370,14 @@ int Udp2_5Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, int pa
         elv_h += corrections_.elevation_offset_delta_f[mirror_index];
       }
       int azimuth = (int)(azi_h * kAllFineResolutionFloat + CIRCLE) % CIRCLE;
-      if (frame.config.fov_start != -1 && frame.config.fov_end != -1) {
+      if (frame.config.fov_start != -1 && frame.config.fov_end != -1)
+      {
         int fov_transfer = azimuth / 256 / 100;
-        if (fov_transfer < frame.config.fov_start || fov_transfer > frame.config.fov_end) {  // 不在fov范围continue
+        if (fov_transfer < frame.config.fov_start || fov_transfer > frame.config.fov_end){//不在fov范围continue
           memset(&frame.points[point_index], 0, sizeof(T_Point));
           continue;
         }
-      }
+      }       
       int elevation = (int)(elv_h * kAllFineResolutionFloat + CIRCLE) % CIRCLE;
       float xyDistance = distance * this->cos_all_angle_[elevation];
       float x = xyDistance * this->sin_all_angle_[azimuth];
@@ -391,8 +395,9 @@ int Udp2_5Parser<T_Point>::ComputeXYZI(LidarDecodedFrame<T_Point> &frame, int pa
   return 0;
 }
 
-template <typename T_Point>
-int Udp2_5Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const UdpPacket &udpPacket) {
+template<typename T_Point>
+int Udp2_5Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const UdpPacket& udpPacket)
+{
   if (!this->get_correction_file_) {
     static bool printErrorBool = true;
     if (printErrorBool) {
@@ -401,39 +406,43 @@ int Udp2_5Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const
     }
     return -1;
   }
-  if (udpPacket.buffer[0] != 0xEE || udpPacket.buffer[1] != 0xFF) {
+  if (udpPacket.buffer[0] != 0xEE || udpPacket.buffer[1] != 0xFF ) {
     return -1;
   }
 
-  const HS_LIDAR_HEADER_ET_V5 *pHeader =
-      reinterpret_cast<const HS_LIDAR_HEADER_ET_V5 *>(
-          &(udpPacket.buffer[0]) + sizeof(HS_LIDAR_PRE_HEADER));
+  const HS_LIDAR_HEADER_ET_V5* pHeader =
+    reinterpret_cast<const HS_LIDAR_HEADER_ET_V5 *>(
+      &(udpPacket.buffer[0]) + sizeof(HS_LIDAR_PRE_HEADER));
 
   const HS_LIDAR_TAIL_ET_V5 *pTail =
-      reinterpret_cast<const HS_LIDAR_TAIL_ET_V5 *>(
-          &(udpPacket.buffer[0]) + pHeader->GetPacketSize() -
-          sizeof(HS_LIDAR_CYBER_SECURITY_ET_V5) -
-          sizeof(HS_LIDAR_TAIL_CRC_ET_V5) -
-          sizeof(HS_LIDAR_TAIL_SEQ_NUM_ET_V5) -
-          sizeof(HS_LIDAR_TAIL_ET_V5));
-  if (pHeader->HasSeqNum()) {
+    reinterpret_cast<const HS_LIDAR_TAIL_ET_V5 *>(
+      &(udpPacket.buffer[0]) +  pHeader->GetPacketSize() - 
+      sizeof(HS_LIDAR_CYBER_SECURITY_ET_V5) - 
+      sizeof(HS_LIDAR_TAIL_CRC_ET_V5) - 
+      sizeof(HS_LIDAR_TAIL_SEQ_NUM_ET_V5) - 
+      sizeof(HS_LIDAR_TAIL_ET_V5)
+      );
+  if (pHeader->HasSeqNum()){
     const HS_LIDAR_TAIL_SEQ_NUM_ET_V5 *pTailSeqNum =
-        reinterpret_cast<const HS_LIDAR_TAIL_SEQ_NUM_ET_V5 *>(
-            &(udpPacket.buffer[0]) + pHeader->GetPacketSize() -
-            sizeof(HS_LIDAR_CYBER_SECURITY_ET_V5) -
-            sizeof(HS_LIDAR_TAIL_CRC_ET_V5) -
-            sizeof(HS_LIDAR_TAIL_SEQ_NUM_ET_V5));
+      reinterpret_cast<const HS_LIDAR_TAIL_SEQ_NUM_ET_V5 *>(
+      &(udpPacket.buffer[0]) + pHeader->GetPacketSize() - 
+      sizeof(HS_LIDAR_CYBER_SECURITY_ET_V5) - 
+      sizeof(HS_LIDAR_TAIL_CRC_ET_V5) - 
+      sizeof(HS_LIDAR_TAIL_SEQ_NUM_ET_V5)
+      );
     this->CalPktLoss(pTailSeqNum->GetSeqNum());
   }
   this->CalPktTimeLoss(pTail->GetMicroLidarTimeU64());
-  const HS_LIDAR_BODY_SEQ3_ET_V5 *pSeq3 =
-      reinterpret_cast<const HS_LIDAR_BODY_SEQ3_ET_V5 *>(
-          (const unsigned char *)pHeader +
-          sizeof(HS_LIDAR_HEADER_ET_V5) + 2);
-  const HS_LIDAR_BODY_LASTER_UNIT_ET_V5 *pUnit =
-      reinterpret_cast<const HS_LIDAR_BODY_LASTER_UNIT_ET_V5 *>(
-          (const unsigned char *)pSeq3 +
-          sizeof(HS_LIDAR_BODY_SEQ3_ET_V5));
+  const HS_LIDAR_BODY_SEQ3_ET_V5* pSeq3 = 
+    reinterpret_cast<const HS_LIDAR_BODY_SEQ3_ET_V5 *>(
+      (const unsigned char *)pHeader + 
+      sizeof(HS_LIDAR_HEADER_ET_V5) + 2
+    );
+  const HS_LIDAR_BODY_LASTER_UNIT_ET_V5* pUnit = 
+    reinterpret_cast<const HS_LIDAR_BODY_LASTER_UNIT_ET_V5 *>(
+      (const unsigned char *)pSeq3 + 
+      sizeof(HS_LIDAR_BODY_SEQ3_ET_V5)
+    );
 
   if (frame.use_timestamp_type == 0) {
     frame.sensor_timestamp[frame.packet_num] = pTail->GetMicroLidarTimeU64();
@@ -449,45 +458,49 @@ int Udp2_5Parser<T_Point>::DecodePacket(LidarDecodedFrame<T_Point> &frame, const
   frame.block_num = pHeader->GetBlockNum();
   frame.laser_num = pHeader->GetLaserNum();
   uint8_t mirror_index = pTail->GetMirrorIndex();
-
+  
   int index = frame.packet_num * pHeader->GetBlockNum() * pHeader->GetLaserNum();
   for (int blockId = 0; blockId < pHeader->GetBlockNum(); blockId++) {
     for (int seqId = 0; seqId < pHeader->GetSeqNum(); seqId++) {
       int16_t horizontalAngle = pSeq3->GetHorizontalAngle();
       int16_t verticalAngle = pSeq3->GetVerticalAngle();
-      for (int unitId = 0; unitId < (pHeader->GetLaserNum() / pHeader->GetSeqNum()); unitId++) {
+      for (int unitId = 0; unitId < (pHeader->GetLaserNum()/pHeader->GetSeqNum()); unitId++){
         frame.pointData[index].reflectivities = pUnit->GetReflectivity();
         frame.pointData[index].distances = pUnit->GetDistance();
-        frame.pointData[index].azimuth = horizontalAngle / 512.0f;
-        frame.pointData[index].elevation = verticalAngle / 512.0f;
+        frame.pointData[index].azimuth = horizontalAngle/512.0f;
+        frame.pointData[index].elevation = verticalAngle/512.0f;
         frame.pointData[index].mirror_index = mirror_index;
         index++;
         pUnit += 1;
       }
       // pSeq3 next
       pSeq3 = reinterpret_cast<const HS_LIDAR_BODY_SEQ3_ET_V5 *>(
-          (const unsigned char *)pSeq3 +
-          sizeof(HS_LIDAR_BODY_SEQ3_ET_V5) +
-          sizeof(HS_LIDAR_BODY_LASTER_UNIT_ET_V5) * (pHeader->GetLaserNum() / pHeader->GetSeqNum()));
-
+        (const unsigned char *)pSeq3 + 
+        sizeof(HS_LIDAR_BODY_SEQ3_ET_V5) + 
+        sizeof(HS_LIDAR_BODY_LASTER_UNIT_ET_V5)*(pHeader->GetLaserNum()/pHeader->GetSeqNum())  
+       );
+       
       // pUnit next
       pUnit = reinterpret_cast<const HS_LIDAR_BODY_LASTER_UNIT_ET_V5 *>(
-          (const unsigned char *)pSeq3 +
-          sizeof(HS_LIDAR_BODY_SEQ3_ET_V5));
-    }
+        (const unsigned char *)pSeq3 + 
+        sizeof(HS_LIDAR_BODY_SEQ3_ET_V5)
+      ); 
+    } 
     if (blockId < (pHeader->GetBlockNum())) {
       // skip point id
       pSeq3 = reinterpret_cast<const HS_LIDAR_BODY_SEQ3_ET_V5 *>(
-          (const unsigned char *)pSeq3 + 2);
+        (const unsigned char *)pSeq3 + 2  
+        );
       pUnit = reinterpret_cast<const HS_LIDAR_BODY_LASTER_UNIT_ET_V5 *>(
-          (const unsigned char *)pUnit + 2);
-    }  // end if (blockId < (pHeader->GetBlockNum()))
+        (const unsigned char *)pUnit + 2
+        );
+    } // end if (blockId < (pHeader->GetBlockNum()))
   }
   uint16_t frame_id = pTail->GetFrameID();
   if (this->use_angle_ && IsNeedFrameSplit(frame_id)) {
     frame.scan_complete = true;
   }
-  this->last_frameid_ = pTail->GetFrameID();
+  this->last_frameid_  = pTail->GetFrameID();
   frame.packet_num++;
   return 0;
 }

@@ -3,26 +3,26 @@ Copyright (C) 2023 Hesai Technology Co., Ltd.
 Copyright (C) 2023 Original Authors
 All rights reserved.
 
-All code in this repository is released under the terms of the following Modified BSD License.
-Redistribution and use in source and binary forms, with or without modification, are permitted
+All code in this repository is released under the terms of the following Modified BSD License. 
+Redistribution and use in source and binary forms, with or without modification, are permitted 
 provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this list of conditions and
+* Redistributions of source code must retain the above copyright notice, this list of conditions and 
   the following disclaimer.
 
-* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and
+* Redistributions in binary form must reproduce the above copyright notice, this list of conditions and 
   the following disclaimer in the documentation and/or other materials provided with the distribution.
 
-* Neither the name of the copyright holder nor the names of its contributors may be used to endorse or
+* Neither the name of the copyright holder nor the names of its contributors may be used to endorse or 
   promote products derived from this software without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
-TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED 
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A 
+PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR 
+TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ************************************************************************************************/
 #ifndef FAULT_MESSAGE_H
@@ -59,8 +59,8 @@ struct FaultMessageInfo4_3 {
       printf(" 0x%02x", time_division_multiplexing[i]);
     }
     printf("\n");
-    printf("software_id: %04x, software_version: %04x, hardware_version: %04x, bt_version: %04x\n",
-           software_id, software_version, hardware_version, bt_version);
+    printf("software_id: %04x, software_version: %04x, hardware_version: %04x, bt_version: %04x\n", 
+            software_id, software_version, hardware_version, bt_version);
     printf("heating_state: %d\n", heating_state);
     printf("lidar_high_temp_state: %d\n", high_temperture_shutdown_state);
   }
@@ -88,8 +88,8 @@ struct FaultMessageInfo4_7 {
       printf(" 0x%02x", fault_indicate[i]);
     }
     printf("\n");
-    printf("customer_id: %02x, software_version: %02x, iteration_version: %02x\n",
-           customer_id, software_version, iteration_version);
+    printf("customer_id: %02x, software_version: %02x, iteration_version: %02x\n", 
+            customer_id, software_version, iteration_version);
   }
 };
 
@@ -112,13 +112,13 @@ struct FaultMessageInfo {
   FaultMessageUnionInfo union_info;
   void Print() const {
     printf("version: %u\n", version);
-    printf("utc_time: %u.%u.%u %u:%u:%u.%u\n", utc_time[0], utc_time[1],
-           utc_time[2], utc_time[3], utc_time[4], utc_time[5], timestamp);
+    printf("utc_time: %u.%u.%u %u:%u:%u.%u\n", utc_time[0], utc_time[1], 
+            utc_time[2], utc_time[3], utc_time[4], utc_time[5], timestamp);
     printf("total_time: %lf\n", total_time);
     printf("operate_state: %u\n", operate_state);
     printf("fault_state: %d\n", fault_state);
-    printf("total_faultcode_num: %d, faultcode_id: %d, faultcode: 0x%08x\n",
-           total_faultcode_num, faultcode_id, faultcode);
+    printf("total_faultcode_num: %d, faultcode_id: %d, faultcode: 0x%08x\n", 
+            total_faultcode_num, faultcode_id, faultcode);
     switch (fault_prase_version) {
       case 0x43:
         union_info.fault4_3.Print();
